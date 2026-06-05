@@ -26,6 +26,7 @@ import { ParticipantLayout } from './components/participant/ParticipantLayout';
 import { ParticipantDashboard } from './pages/participant/ParticipantDashboard';
 import { WaitingRoomPage } from './pages/participant/WaitingRoomPage';
 import { LiveQuizPage } from './pages/participant/LiveQuizPage';
+import { ParticipantResultsPage } from './pages/participant/ParticipantResultsPage';
 
 // Shared
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -77,6 +78,7 @@ function App() {
           <Route path="dashboard" element={<ParticipantDashboard />} />
           <Route path="quiz/:quizId/waiting" element={<WaitingRoomPage />} />
           <Route path="quiz/:quizId/live" element={<LiveQuizPage />} />
+          <Route path="results/:quizId" element={<ParticipantResultsPage />} />
           {/* We'll add more participant routes here later */}
         </Route>
       </Routes>

@@ -49,8 +49,9 @@ export const QuizzesPage: React.FC = () => {
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
-      await updateDoc(doc(db, 'quizzes', id), { status: newStatus });
-      setQuizzes(quizzes.map(q => q.id === id ? { ...q, status: newStatus } : q));
+      const updatedAt = new Date().toISOString();
+      await updateDoc(doc(db, 'quizzes', id), { status: newStatus, updatedAt });
+      setQuizzes(quizzes.map(q => q.id === id ? { ...q, status: newStatus, updatedAt } : q));
       addToast(`Quiz status updated to ${newStatus}`, 'success');
     } catch (error) {
       console.error("Error updating quiz status:", error);
@@ -139,7 +140,7 @@ export const QuizzesPage: React.FC = () => {
                             <Link to={`/live-tv`} target="_blank">
                               <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer mr-2 shadow-md ring-1 ring-blue-500 ring-offset-1 ring-offset-background animate-pulse">Live Monitor</Button>
                             </Link>
-                            <Button size="sm" onClick={() => handleUpdateStatus(quiz.id, 'draft')} className="bg-amber-600 hover:bg-amber-700 cursor-pointer">Stop Quiz</Button>
+                            <Button size="sm" onClick={() => handleUpdateStatus(quiz.id, 'completed')} className="bg-amber-600 hover:bg-amber-700 cursor-pointer text-white">Stop Quiz</Button>
                           </>
                         )}
                         <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => handleDuplicate(quiz)}>Duplicate</Button>

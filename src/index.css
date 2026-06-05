@@ -121,6 +121,8 @@
     --border: #27272a;
     --input: #27272a;
     --ring: #6366f1;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
   }
 }
 
@@ -160,4 +162,10 @@
 
 .animate-slide-up-fade {
   animation: slide-up-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }

@@ -40,17 +40,25 @@ export const CoursesPage: React.FC = () => {
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCourseName || !eventId) return;
+    const trimmedName = newCourseName.trim();
+    if (!trimmedName || !eventId) return;
     
+    // Check for duplicate course names (case-insensitive)
+    const isDuplicate = courses.some(course => course.name.toLowerCase() === trimmedName.toLowerCase());
+    if (isDuplicate) {
+      addToast("A course with this name already exists", "error");
+      return;
+    }
+
     setIsAdding(true);
     try {
       const docRef = await addDoc(collection(db, 'courses'), {
-        name: newCourseName,
-        description: newCourseDesc,
+        name: trimmedName,
+        description: newCourseDesc.trim(),
         eventId: eventId,
         createdAt: new Date().toISOString()
       });
-      setCourses([...courses, { id: docRef.id, name: newCourseName, description: newCourseDesc, eventId }]);
+      setCourses([...courses, { id: docRef.id, name: trimmedName, description: newCourseDesc.trim(), eventId }]);
       setNewCourseName('');
       setNewCourseDesc('');
       addToast("Course created successfully", 'success');
