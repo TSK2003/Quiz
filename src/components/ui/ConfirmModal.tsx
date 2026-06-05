@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './Button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './Card';
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from './Card';
 import { AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

@@ -4,9 +4,13 @@ import { collection, query, getDocs, addDoc, serverTimestamp, doc, writeBatch, w
 import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Modal } from '../../components/ui/Modal';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { Link } from 'react-router-dom';
-import { Folder, Plus, Calendar, Trash2 } from 'lucide-react';
+import { Folder, Plus, Calendar, Trash2, ShieldAlert } from 'lucide-react';
 import { useToastStore } from '../../store/useToastStore';
+import { motion } from 'framer-motion';
 
 export const EventsPage: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
@@ -131,17 +135,16 @@ export const EventsPage: React.FC = () => {
         <CardContent className="p-6">
           <form onSubmit={handleCreateEvent} className="flex gap-4 items-end">
             <div className="flex-1 space-y-2">
-              <label className="text-sm font-medium text-foreground">Create New Event</label>
-              <input 
+              <label className="text-sm font-semibold text-foreground">Create New Event</label>
+              <Input 
                 type="text" 
                 placeholder="e.g. Spring Campus Hiring 2026"
                 value={newEventName}
                 onChange={(e) => setNewEventName(e.target.value)}
-                className="w-full p-2.5 rounded-md border border-border bg-background shadow-sm focus:ring-2 focus:ring-primary focus:outline-none"
                 required
               />
             </div>
-            <Button type="submit" isLoading={isCreating} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 cursor-pointer">
+            <Button type="submit" isLoading={isCreating} className="gap-2">
               <Plus className="w-4 h-4" />
               Create Event
             </Button>
@@ -155,8 +158,14 @@ export const EventsPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event) => (
-            <Link key={event.id} to={`/admin/events/${event.id}/dashboard`} className="w-full block">
+          {events.map((event, index) => (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+              key={event.id}
+            >
+              <Link to={`/admin/events/${event.id}/dashboard`} className="w-full block h-full">
             <Card className="hover:shadow-md transition-shadow border-border overflow-hidden flex flex-col cursor-pointer group">
               <CardHeader className="bg-secondary/30 border-b border-border pb-4 group-hover:bg-secondary/50 transition-colors">
                 <div className="flex justify-between items-start">
@@ -209,71 +218,71 @@ export const EventsPage: React.FC = () => {
                   <div className="w-full p-4 bg-muted text-center text-sm font-medium text-primary hover:bg-primary hover:text-primary-foreground transition-colors">
                     Manage Event &rarr;
                   </div>
-                
               </CardContent>
             </Card>
             </Link>
+            </motion.div>
           ))}
           {events.length === 0 && (
-            <div className="col-span-full p-12 text-center text-muted-foreground bg-muted/30 rounded-xl border border-dashed border-border">
-              <Folder className="w-12 h-12 mx-auto mb-4 opacity-20" />
-              <p>No events found. Create your first event to get started.</p>
+            <div className="col-span-full">
+              <EmptyState 
+                title="No Events Found"
+                description="Get started by creating your first assessment event using the form above."
+                icon={<Folder className="w-8 h-8" />}
+              />
             </div>
           )}
         </div>
       )}
 
-      {/* Admin Password Verification Modal for Deletion */}
-      {eventToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="bg-card w-full max-w-md rounded-xl shadow-2xl border border-border ring-1 ring-border/50 overflow-hidden relative">
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-destructive mb-2">Security Verification</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                You are about to permanently delete an event. This action cannot be undone. Please enter your admin password to confirm.
-              </p>
-              
-              <form onSubmit={handleDeleteEvent} className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Admin Password</label>
-                  <input
-                    type="password"
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    className="w-full p-2.5 rounded-md border border-border bg-background focus:ring-2 focus:ring-destructive focus:outline-none"
-                    placeholder="Enter your password"
-                    required
-                    autoFocus
-                  />
-                  {deleteError && <p className="text-xs text-destructive mt-1">{deleteError}</p>}
-                </div>
-                
-                <div className="flex justify-end gap-3 mt-6">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => {
-                      setEventToDelete(null);
-                      setAdminPassword('');
-                      setDeleteError('');
-                    }}
-                    disabled={isDeleting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="bg-destructive hover:bg-destructive/90 text-white"
-                    isLoading={isDeleting}
-                  >
-                    Confirm Deletion
-                  </Button>
-                </div>
-              </form>
-            </div>
+      <Modal
+        isOpen={!!eventToDelete}
+        onClose={() => {
+          setEventToDelete(null);
+          setAdminPassword('');
+          setDeleteError('');
+        }}
+        title="Security Verification"
+        description="You are about to permanently delete an event. This action cannot be undone. Please enter your admin password to confirm."
+      >
+        <form onSubmit={handleDeleteEvent} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold">Admin Password</label>
+            <Input
+              type="password"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              placeholder="Enter your password"
+              error={!!deleteError}
+              required
+              autoFocus
+            />
+            {deleteError && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><ShieldAlert className="w-3 h-3"/>{deleteError}</p>}
           </div>
-        </div>
-      )}
+          
+          <div className="flex justify-end gap-3 mt-6">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setEventToDelete(null);
+                setAdminPassword('');
+                setDeleteError('');
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="destructive"
+              isLoading={isDeleting}
+            >
+              Confirm Deletion
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

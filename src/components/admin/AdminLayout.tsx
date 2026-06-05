@@ -5,6 +5,9 @@ import { auth } from '../../config/firebase';
 import { signOut } from 'firebase/auth';
 
 import { BackButton } from '../ui/BackButton';
+import { PageWrapper } from '../ui/PageWrapper';
+import { Button } from '../ui/Button';
+import { LogOut } from 'lucide-react';
 import logo from '../../assets/hero1.png';
 
 export const AdminLayout: React.FC = () => {
@@ -23,22 +26,31 @@ export const AdminLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
+    <div className="min-h-screen bg-muted/30">
+      <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-background/80 border-b border-border/50 supports-[backdrop-filter]:bg-background/60 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BackButton className="mr-2" />
-            <img src={logo} alt="AESCION Logo" className="h-15 w-auto" />
+          <div className="flex items-center gap-4">
+            <BackButton />
+            <div className="h-6 w-px bg-border hidden sm:block"></div>
+            <img src={logo} alt="AESCION Logo" className="h-8 w-auto object-contain" />
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-md font-bold">{user?.name}</span>
-            <button onClick={handleLogout} className="text-md font-medium text-destructive hover:underline hover:cursor-pointer">Logout</button>
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-bold leading-none">{user?.name}</span>
+              <span className="text-xs text-muted-foreground mt-1">Administrator</span>
+            </div>
+            <Button onClick={handleLogout} variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
           </div>
         </div>
       </header>
-      <main className="flex-1 p-6 overflow-y-auto bg-muted/10">
+      <main className="flex-1 p-6 sm:p-8">
         <div className="max-w-7xl mx-auto">
-          <Outlet />
+          <PageWrapper>
+            <Outlet />
+          </PageWrapper>
         </div>
       </main>
     </div>

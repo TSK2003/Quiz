@@ -4,6 +4,9 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { auth } from '../../config/firebase';
 import { signOut } from 'firebase/auth';
 import { BackButton } from '../ui/BackButton';
+import { PageWrapper } from '../ui/PageWrapper';
+import { Button } from '../ui/Button';
+import { LogOut } from 'lucide-react';
 import logo from '../../assets/hero1.png';
 
 export const ParticipantLayout: React.FC = () => {
@@ -22,19 +25,30 @@ export const ParticipantLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="bg-card border-b border-border py-4 px-6 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2">
-          <BackButton className="mr-2" />
-          <img src={logo} alt="AESCION Logo" className="h-10 w-auto" />
-          <span className="text-md font-bold text-2xl mx-4">Welcome Back, {user?.name}</span>
-        </div> 
-        <div className="items-center gap-4">
-          <button onClick={handleLogout} className="text-md font-medium text-destructive hover:underline hover:cursor-pointer text-xl">Logout</button>
+    <div className="min-h-screen bg-muted/30 flex flex-col">
+      <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-background/80 border-b border-border/50 supports-[backdrop-filter]:bg-background/60 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <BackButton />
+            <div className="h-6 w-px bg-border hidden sm:block"></div>
+            <img src={logo} alt="AESCION Logo" className="h-8 w-auto object-contain" />
+          </div> 
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-bold leading-none">{user?.name}</span>
+              <span className="text-xs text-muted-foreground mt-1">Participant</span>
+            </div>
+            <Button onClick={handleLogout} variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
-      <main className="flex-1 p-6 flex flex-col max-w-7xl mx-auto w-full">
-        <Outlet />
+      <main className="flex-1 p-6 sm:p-8 flex flex-col max-w-7xl mx-auto w-full">
+        <PageWrapper className="flex-1 flex flex-col">
+          <Outlet />
+        </PageWrapper>
       </main>
     </div>
   );

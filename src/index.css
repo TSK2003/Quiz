@@ -13,6 +13,7 @@
   --color-primary-900: #1e3a8a;
   
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -30,72 +31,96 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 10px);
 }
 
 @layer base {
   :root {
+    /* Enterprise Light Mode Palette (Inspired by Linear/Stripe/Vercel) */
     --background: #ffffff;
-    --foreground: #0f172a;
+    --foreground: #09090b;
     
     --card: #ffffff;
-    --card-foreground: #0f172a;
+    --card-foreground: #09090b;
     
     --popover: #ffffff;
-    --popover-foreground: #0f172a;
+    --popover-foreground: #09090b;
     
-    --primary: #2563eb;
+    --primary: #4f46e5; /* Indigo 600 - Professional and trustworthy */
     --primary-foreground: #ffffff;
     
-    --secondary: #f1f5f9;
-    --secondary-foreground: #0f172a;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #18181b;
     
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a; /* Zinc 500 */
     
-    --accent: #f1f5f9;
-    --accent-foreground: #0f172a;
+    --accent: #f4f4f5;
+    --accent-foreground: #18181b;
     
     --destructive: #ef4444;
     --destructive-foreground: #ffffff;
+    
+    --success: #10b981;
+    --success-foreground: #ffffff;
+    
+    --warning: #f59e0b;
+    --warning-foreground: #ffffff;
 
-    --border: #e2e8f0;
-    --input: #e2e8f0;
-    --ring: #2563eb;
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+    --ring: #4f46e5; /* Match primary */
 
     --radius: 0.5rem;
   }
  
   .dark {
-    --background: #020617;
-    --foreground: #f8fafc;
+    /* Enterprise Dark Mode Palette (Deep, premium dark theme) */
+    --background: #09090b;
+    --foreground: #fafafa;
     
-    --card: #0f172a;
-    --card-foreground: #f8fafc;
+    --card: #121214;
+    --card-foreground: #fafafa;
     
-    --popover: #0f172a;
-    --popover-foreground: #f8fafc;
+    --popover: #121214;
+    --popover-foreground: #fafafa;
     
-    --primary: #3b82f6;
+    --primary: #6366f1; /* Indigo 500 */
     --primary-foreground: #ffffff;
     
-    --secondary: #1e293b;
-    --secondary-foreground: #f8fafc;
+    --secondary: #27272a;
+    --secondary-foreground: #fafafa;
     
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
     
-    --accent: #1e293b;
-    --accent-foreground: #f8fafc;
+    --accent: #27272a;
+    --accent-foreground: #fafafa;
     
     --destructive: #7f1d1d;
-    --destructive-foreground: #f8fafc;
+    --destructive-foreground: #fafafa;
     
-    --border: #1e293b;
-    --input: #1e293b;
-    --ring: #3b82f6;
+    --success: #059669;
+    --success-foreground: #fafafa;
+    
+    --warning: #d97706;
+    --warning-foreground: #fafafa;
+    
+    --border: #27272a;
+    --input: #27272a;
+    --ring: #6366f1;
   }
 }
 
@@ -104,7 +129,11 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased selection:bg-primary-500/30;
+    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading tracking-tight;
   }
 }
 
@@ -115,4 +144,20 @@
 .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+}
+
+/* Premium Animations */
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up-fade {
+  animation: slide-up-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

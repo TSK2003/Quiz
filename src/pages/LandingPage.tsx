@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import logo from '../assets/hero.png';
 
 export const LandingPage: React.FC = () => {
-  const { isAuthenticated } = useAuthStore();
+  useAuthStore();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -30,20 +30,12 @@ export const LandingPage: React.FC = () => {
             Aescion Edtech Solutions brings you a secure, analytics-driven, and highly robust platform to conduct professional assessments and technical quizzes.
           </p>
           <div className="flex items-center justify-center gap-4 pt-4">
-            {!isAuthenticated ? (
-              <>
-                <Link to="/register">
-                  <Button size="lg" className="rounded-full">Register</Button>
-                </Link>
-                <Link to="/login">
-                  <Button size="lg" variant="outline" className="rounded-full">Login</Button>
-                </Link>
-              </>
-            ) : (
-              <Link to="/login">
-                <Button size="lg" className="rounded-full">Go to Dashboard</Button>
-              </Link>
-            )}
+            <Link to="/register">
+              <Button size="lg" className="rounded-full">Register</Button>
+            </Link>
+            <Link to="/login">
+              <Button size="lg" variant="outline" className="rounded-full">Login</Button>
+            </Link>
           </div>
         </motion.div>
       </main>
