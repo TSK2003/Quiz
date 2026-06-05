@@ -47,7 +47,7 @@ export const Toaster: React.FC = () => {
             
             <button 
               onClick={() => removeToast(toast.id)}
-              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10"
+              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>

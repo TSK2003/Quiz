@@ -45,18 +45,30 @@ export const EventsPage: React.FC = () => {
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEventName.trim()) return;
+
+    const trimmedName = newEventName.trim();
+    const isDuplicate = events.some(
+      (event) => event.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      addToast("An event with this name already exists.", "error");
+      return;
+    }
     
     setIsCreating(true);
     try {
       const docRef = await addDoc(collection(db, 'events'), {
-        name: newEventName.trim(),
+        name: trimmedName,
         createdAt: serverTimestamp(),
         status: 'inactive'
       });
-      setEvents([...events, { id: docRef.id, name: newEventName.trim(), status: 'inactive' }]);
+      setEvents([...events, { id: docRef.id, name: trimmedName, status: 'inactive' }]);
       setNewEventName('');
+      addToast("Event created successfully", "success");
     } catch (err) {
       console.error("Error creating event", err);
+      addToast("Failed to create event", "error");
     } finally {
       setIsCreating(false);
     }
