@@ -9,6 +9,7 @@ import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Link } from 'react-router-dom';
 import { Folder, Plus, Calendar, Trash2, ShieldAlert, Clock } from 'lucide-react';
+import { TimePicker } from '../../components/ui/TimePicker';
 import { useToastStore } from '../../store/useToastStore';
 import { motion } from 'framer-motion';
 
@@ -16,8 +17,20 @@ export const EventsPage: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  
+  // Event Form State
   const [newEventName, setNewEventName] = useState('');
-  const [newEventDuration, setNewEventDuration] = useState('');
+  const [newEventDays, setNewEventDays] = useState('');
+  
+  const [startHour, setStartHour] = useState('09');
+  const [startMinute, setStartMinute] = useState('00');
+  const [startAmPm, setStartAmPm] = useState('AM');
+  
+  const [endHour, setEndHour] = useState('05');
+  const [endMinute, setEndMinute] = useState('00');
+  const [endAmPm, setEndAmPm] = useState('PM');
+  
+
   
   const { addToast } = useToastStore();
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
@@ -45,7 +58,7 @@ export const EventsPage: React.FC = () => {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEventName.trim()) return;
+    if (!newEventName.trim() || !newEventDays.trim()) return;
 
     const trimmedName = newEventName.trim();
     const isDuplicate = events.some(
@@ -57,19 +70,29 @@ export const EventsPage: React.FC = () => {
       return;
     }
     
-    const trimmedDuration = newEventDuration.trim();
+    const startTime = `${startHour}:${startMinute} ${startAmPm}`;
+    const endTime = `${endHour}:${endMinute} ${endAmPm}`;
 
     setIsCreating(true);
     try {
       const docRef = await addDoc(collection(db, 'events'), {
         name: trimmedName,
-        duration: trimmedDuration,
+        days: newEventDays.trim(),
+        startTime,
+        endTime,
         createdAt: serverTimestamp(),
         status: 'inactive'
       });
-      setEvents([...events, { id: docRef.id, name: trimmedName, duration: trimmedDuration, status: 'inactive' }]);
+      setEvents([...events, { 
+        id: docRef.id, 
+        name: trimmedName, 
+        days: newEventDays.trim(),
+        startTime,
+        endTime,
+        status: 'inactive' 
+      }]);
       setNewEventName('');
-      setNewEventDuration('');
+      setNewEventDays('');
       addToast("Event created successfully", "success");
     } catch (err) {
       console.error("Error creating event", err);
@@ -150,9 +173,9 @@ export const EventsPage: React.FC = () => {
 
       <Card className="border-primary/20 shadow-sm bg-primary/5">
         <CardContent className="p-6">
-          <form onSubmit={handleCreateEvent} className="flex gap-4 items-end">
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-semibold text-foreground">Create New Event</label>
+          <form onSubmit={handleCreateEvent} className="flex flex-col gap-4 xl:flex-row xl:items-end xl:flex-wrap w-full">
+            <div className="flex-[2] space-y-2 min-w-[200px]">
+              <label className="text-sm font-semibold text-foreground">Event Name</label>
               <Input 
                 type="text" 
                 placeholder="e.g. Spring Campus Hiring 2026"
@@ -161,17 +184,42 @@ export const EventsPage: React.FC = () => {
                 required
               />
             </div>
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 min-w-[120px]">
               <label className="text-sm font-semibold text-foreground">Duration</label>
               <Input 
                 type="text" 
-                placeholder="e.g. 60 mins"
-                value={newEventDuration}
-                onChange={(e) => setNewEventDuration(e.target.value)}
+                placeholder="e.g. 15 days"
+                value={newEventDays}
+                onChange={(e) => setNewEventDays(e.target.value)}
                 required
               />
             </div>
-            <Button type="submit" isLoading={isCreating} className="gap-2">
+            
+            <div className="flex-1 space-y-2 min-w-[180px]">
+              <label className="text-sm font-semibold text-foreground">Start Time</label>
+              <TimePicker
+                hour={startHour}
+                minute={startMinute}
+                amPm={startAmPm}
+                onHourChange={setStartHour}
+                onMinuteChange={setStartMinute}
+                onAmPmChange={setStartAmPm}
+              />
+            </div>
+            
+            <div className="flex-1 space-y-2 min-w-[180px]">
+              <label className="text-sm font-semibold text-foreground">End Time</label>
+              <TimePicker
+                hour={endHour}
+                minute={endMinute}
+                amPm={endAmPm}
+                onHourChange={setEndHour}
+                onMinuteChange={setEndMinute}
+                onAmPmChange={setEndAmPm}
+              />
+            </div>
+            
+            <Button type="submit" isLoading={isCreating} className="gap-2 shrink-0 h-10 whitespace-nowrap px-6">
               <Plus className="w-4 h-4" />
               Create Event
             </Button>
@@ -244,6 +292,18 @@ export const EventsPage: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       Duration: {event.duration}
+                    </div>
+                  )}
+                  {event.days && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Duration: {event.days}
+                    </div>
+                  )}
+                  {event.startTime && event.endTime && (
+                    <div className="flex items-center gap-1 mt-0.5 text-xs">
+                      <Clock className="w-3 h-3" />
+                      {event.startTime} - {event.endTime}
                     </div>
                   )}
                 </CardDescription>

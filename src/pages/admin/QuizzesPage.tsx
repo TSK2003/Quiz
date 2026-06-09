@@ -85,6 +85,7 @@ export const QuizzesPage: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight">Quizzes</h1>
           <p className="text-muted-foreground">Manage your assessments, start/stop them, and manage question sets.</p>
         </div>
+
         <Link to={`/admin/events/${eventId}/quizzes/create`}>
           <Button>Create New Quiz</Button>
         </Link>
@@ -126,28 +127,32 @@ export const QuizzesPage: React.FC = () => {
                           {quiz.status.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right space-x-2">
-                        {quiz.status === 'draft' && (
-                          <>
-                            <Link to={`/admin/events/${eventId}/quizzes/${quiz.id}/assign`}>
-                              <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10 cursor-pointer">Assign A/B</Button>
-                            </Link>
-                            <Button size="sm" onClick={() => handleUpdateStatus(quiz.id, 'active')} className="bg-green-600 hover:bg-green-700 cursor-pointer">Start Quiz</Button>
-                          </>
-                        )}
-                        {quiz.status === 'active' && (
-                          <>
-                            <Link to={`/live-tv`} target="_blank">
-                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer mr-2 shadow-md ring-1 ring-blue-500 ring-offset-1 ring-offset-background animate-pulse">Live Monitor</Button>
-                            </Link>
-                            <Button size="sm" onClick={() => handleUpdateStatus(quiz.id, 'completed')} className="bg-amber-600 hover:bg-amber-700 cursor-pointer text-white">Stop Quiz</Button>
-                          </>
-                        )}
-                        <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => handleDuplicate(quiz)}>Duplicate</Button>
-                        {quiz.status !== 'archived' && (
-                          <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => handleUpdateStatus(quiz.id, 'archived')}>Archive</Button>
-                        )}
-                        <Button size="sm" variant="destructive" className="cursor-pointer" onClick={() => setQuizToDelete(quiz.id)}>Delete</Button>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          {quiz.status === 'draft' && (
+                            <>
+                              <Link to={`/admin/events/${eventId}/quizzes/${quiz.id}/assign`}>
+                                <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10 cursor-pointer">Assign A/B</Button>
+                              </Link>
+                              {quiz.isAssigned && (
+                                <Button size="sm" onClick={() => handleUpdateStatus(quiz.id, 'active')} className="bg-green-600 hover:bg-green-700 cursor-pointer">Start Quiz</Button>
+                              )}
+                            </>
+                          )}
+                          {quiz.status === 'active' && (
+                            <>
+                              <Link to={`/live-tv`} target="_blank">
+                                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer shadow-md ring-1 ring-blue-500 ring-offset-1 ring-offset-background animate-pulse">Live Monitor</Button>
+                              </Link>
+                              <Button size="sm" onClick={() => handleUpdateStatus(quiz.id, 'completed')} className="bg-amber-600 hover:bg-amber-700 cursor-pointer text-white">Stop Quiz</Button>
+                            </>
+                          )}
+                          <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => handleDuplicate(quiz)}>Duplicate</Button>
+                          {quiz.status !== 'archived' && (
+                            <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => handleUpdateStatus(quiz.id, 'archived')}>Archive</Button>
+                          )}
+                          <Button size="sm" variant="destructive" className="cursor-pointer" onClick={() => setQuizToDelete(quiz.id)}>Delete</Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

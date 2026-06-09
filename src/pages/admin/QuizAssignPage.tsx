@@ -103,6 +103,10 @@ export const QuizAssignPage: React.FC = () => {
         }, { merge: true });
       });
 
+      // Mark quiz as assigned
+      const quizRef = doc(db, 'quizzes', quizId);
+      batch.update(quizRef, { isAssigned: true });
+
       await batch.commit();
 
       await addDoc(collection(db, 'auditLogs'), {
