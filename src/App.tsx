@@ -20,6 +20,7 @@ import { QuizzesPage } from './pages/admin/QuizzesPage';
 import { QuizCreatePage } from './pages/admin/QuizCreatePage';
 import { QuizAssignPage } from './pages/admin/QuizAssignPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
+import { ParticipantsAttendancePage } from './pages/admin/ParticipantsAttendancePage';
 
 // Participant
 import { ParticipantLayout } from './components/participant/ParticipantLayout';
@@ -66,6 +67,7 @@ function App() {
           <Route path="quizzes/create" element={<QuizCreatePage />} />
           <Route path="quizzes/:quizId/assign" element={<QuizAssignPage />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
+          <Route path="attendance" element={<ParticipantsAttendancePage />} />
         </Route>
         
         <Route path="/live-tv" element={<LiveTV />} />

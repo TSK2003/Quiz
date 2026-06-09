@@ -7,7 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { BackButton } from '../ui/BackButton';
 import { PageWrapper } from '../ui/PageWrapper';
 import { Button } from '../ui/Button';
-import { LogOut, LayoutDashboard, Users, BookOpen, PenTool, ShieldAlert } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, BookOpen, PenTool, ShieldAlert, ClipboardCheck } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 import logo from '../../assets/hero1.png';
@@ -53,6 +53,7 @@ export const EventAdminLayout: React.FC = () => {
     { name: 'Courses', path: `/admin/events/${eventId}/courses`, icon: BookOpen },
     { name: 'Quizzes', path: `/admin/events/${eventId}/quizzes`, icon: PenTool },
     { name: 'Audit Logs', path: `/admin/events/${eventId}/audit-logs`, icon: ShieldAlert },
+    { name: 'Participants Attendance', path: `/admin/events/${eventId}/attendance`, icon: ClipboardCheck },
   ];
 
   return (

@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Link } from 'react-router-dom';
-import { Folder, Plus, Calendar, Trash2, ShieldAlert } from 'lucide-react';
+import { Folder, Plus, Calendar, Trash2, ShieldAlert, Clock } from 'lucide-react';
 import { useToastStore } from '../../store/useToastStore';
 import { motion } from 'framer-motion';
 
@@ -17,6 +17,7 @@ export const EventsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [newEventName, setNewEventName] = useState('');
+  const [newEventDuration, setNewEventDuration] = useState('');
   
   const { addToast } = useToastStore();
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
@@ -56,15 +57,19 @@ export const EventsPage: React.FC = () => {
       return;
     }
     
+    const trimmedDuration = newEventDuration.trim();
+
     setIsCreating(true);
     try {
       const docRef = await addDoc(collection(db, 'events'), {
         name: trimmedName,
+        duration: trimmedDuration,
         createdAt: serverTimestamp(),
         status: 'inactive'
       });
-      setEvents([...events, { id: docRef.id, name: trimmedName, status: 'inactive' }]);
+      setEvents([...events, { id: docRef.id, name: trimmedName, duration: trimmedDuration, status: 'inactive' }]);
       setNewEventName('');
+      setNewEventDuration('');
       addToast("Event created successfully", "success");
     } catch (err) {
       console.error("Error creating event", err);
@@ -156,6 +161,16 @@ export const EventsPage: React.FC = () => {
                 required
               />
             </div>
+            <div className="flex-1 space-y-2">
+              <label className="text-sm font-semibold text-foreground">Duration</label>
+              <Input 
+                type="text" 
+                placeholder="e.g. 60 mins"
+                value={newEventDuration}
+                onChange={(e) => setNewEventDuration(e.target.value)}
+                required
+              />
+            </div>
             <Button type="submit" isLoading={isCreating} className="gap-2">
               <Plus className="w-4 h-4" />
               Create Event
@@ -220,9 +235,17 @@ export const EventsPage: React.FC = () => {
                   </div>
                 </div>
                 <CardTitle className="text-xl">{event.name}</CardTitle>
-                <CardDescription className="flex items-center gap-1 mt-1">
-                  <Calendar className="w-3 h-3" />
-                  Created recently
+                <CardDescription className="flex flex-col gap-1 mt-1">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    Created recently
+                  </div>
+                  {event.duration && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Duration: {event.duration}
+                    </div>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0 flex-1 flex flex-col justify-end">

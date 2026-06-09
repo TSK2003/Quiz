@@ -50,10 +50,22 @@ export const RegisterPage: React.FC = () => {
         if (!eventSnap.empty) {
           const activeEvent = eventSnap.docs[0];
           setActiveEventId(activeEvent.id);
+          console.log("Active event found:", activeEvent.id, activeEvent.data().name);
 
           const coursesQuery = query(collection(db, 'courses'), where('eventId', '==', activeEvent.id));
           const coursesSnap = await getDocs(coursesQuery);
+          console.log("Courses found for active event:", coursesSnap.docs.length);
           setCourses(coursesSnap.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
+        } else {
+          console.warn("No active event found. Fetching all courses as fallback.");
+          // Fallback: fetch all courses so participants can still register
+          const allCoursesSnap = await getDocs(collection(db, 'courses'));
+          console.log("Total courses found (fallback):", allCoursesSnap.docs.length);
+          if (allCoursesSnap.docs.length > 0) {
+            // Use the eventId from the first course found
+            setActiveEventId(allCoursesSnap.docs[0].data().eventId);
+            setCourses(allCoursesSnap.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
+          }
         }
       } catch (err) {
         console.error("Failed to fetch active event or courses", err);
@@ -129,10 +141,10 @@ export const RegisterPage: React.FC = () => {
                 <select 
                   id="courseId" 
                   {...register('courseId')}
-                  disabled={!activeEventId}
+                  disabled={courses.length === 0}
                   className={`appearance-none flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-secondary/30 transition-colors cursor-pointer shadow-sm ${errors.courseId ? 'border-destructive' : ''}`}
                 >
-                  <option value="">Select a course</option>
+                  <option value="">{courses.length === 0 ? 'No courses available' : 'Select a course'}</option>
                   {courses.map(course => (
                     <option key={course.id} value={course.id}>{course.name}</option>
                   ))}
@@ -141,6 +153,7 @@ export const RegisterPage: React.FC = () => {
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                 </div>
               </div>
+              {courses.length === 0 && <p className="text-xs text-amber-600">No courses found. Please ask the admin to set an event as Active and add courses to it.</p>}
               {errors.courseId && <p className="text-xs text-destructive">{errors.courseId.message}</p>}
             </div>
 
