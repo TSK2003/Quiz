@@ -13,6 +13,7 @@ export const UsersPage: React.FC = () => {
   const [courses, setCourses] = useState<{id: string, name: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
+  const [searchName, setSearchName] = useState('');
   const { addToast } = useToastStore();
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
@@ -81,9 +82,11 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  const filteredUsers = selectedCourse === 'all' 
-    ? users 
-    : users.filter(u => u.courseId === selectedCourse);
+  const filteredUsers = users.filter(u => {
+    const matchesCourse = selectedCourse === 'all' || u.courseId === selectedCourse;
+    const matchesName = u.name?.toLowerCase().includes(searchName.toLowerCase());
+    return matchesCourse && matchesName;
+  });
 
   return (
     <div className="space-y-6">
@@ -114,8 +117,22 @@ export const UsersPage: React.FC = () => {
 
       <Card className="border-border shadow-sm">
         <CardHeader>
-          <CardTitle>Participants List</CardTitle>
-          <CardDescription>View, approve, reject, modify, or remove users.</CardDescription>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle>Participants List</CardTitle>
+              <CardDescription>View, approve, reject, modify, or remove users.</CardDescription>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search by name..."
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                className="pl-8 pr-4 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-[250px]"
+              />
+              <svg className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (

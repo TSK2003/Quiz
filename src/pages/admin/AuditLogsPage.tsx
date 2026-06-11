@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../../config/firebase';
-import { collection, query, getDocs, limit, where } from 'firebase/firestore';
+import { collection, query, getDocs, limit, where, deleteDoc, doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useParams } from 'react-router-dom';
+import { useToastStore } from '../../store/useToastStore';
+import { Trash2 } from 'lucide-react';
 
 export const AuditLogsPage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const { addToast } = useToastStore();
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -67,9 +74,22 @@ export const AuditLogsPage: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Recent Events</CardTitle>
-          <CardDescription>Showing the last 100 system events.</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Recent Events</CardTitle>
+            <CardDescription>Showing the last 100 system events.</CardDescription>
+          </div>
+          {logs.length > 0 && (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="gap-1.5 shrink-0"
+              onClick={() => setShowClearConfirm(true)}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear Logs
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -126,6 +146,32 @@ export const AuditLogsPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        isOpen={showClearConfirm}
+        title="Clear All Audit Logs"
+        description="Are you sure you want to clear all audit logs for this event? This action cannot be undone."
+        confirmText={isClearing ? 'Clearing...' : 'Clear All'}
+        onConfirm={async () => {
+          if (!eventId) return;
+          setIsClearing(true);
+          try {
+            const q = query(collection(db, 'auditLogs'), where('eventId', '==', eventId));
+            const snap = await getDocs(q);
+            const deletePromises = snap.docs.map(d => deleteDoc(doc(db, 'auditLogs', d.id)));
+            await Promise.all(deletePromises);
+            setLogs([]);
+            addToast('All audit logs cleared successfully', 'success');
+          } catch (error) {
+            console.error('Error clearing logs:', error);
+            addToast('Failed to clear audit logs', 'error');
+          } finally {
+            setIsClearing(false);
+            setShowClearConfirm(false);
+          }
+        }}
+        onCancel={() => setShowClearConfirm(false)}
+      />
     </div>
   );
 };

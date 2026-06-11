@@ -1,11 +1,62 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { db } from '../../config/firebase';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, addDoc, onSnapshot } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Link, useNavigate } from 'react-router-dom';
-import { Clock, CheckCircle2 } from 'lucide-react';
+import { Clock, CheckCircle2, ClipboardCheck, CalendarCheck, XCircle } from 'lucide-react';
+
+interface CheckInRecord {
+  id: string;
+  status: string;
+  timestamp: string;
+}
+
+/**
+ * Get current date/time in IST (India Standard Time, UTC+5:30).
+ * Returns a Date object representing the current IST time.
+ */
+const getISTNow = (): Date => {
+  const now = new Date();
+  // IST is UTC+5:30 => offset = 5*60 + 30 = 330 minutes
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utcMs + 330 * 60000);
+};
+
+/**
+ * Get today's "attendance day" key in IST.
+ * The attendance day resets at 8:00 AM IST.
+ * If current IST time is before 8:00 AM, it belongs to the previous day's attendance cycle.
+ */
+const getAttendanceDayKey = (): string => {
+  const ist = getISTNow();
+  // If before 8:00 AM IST, treat as previous day
+  if (ist.getHours() < 8) {
+    ist.setDate(ist.getDate() - 1);
+  }
+  const yyyy = ist.getFullYear();
+  const mm = String(ist.getMonth() + 1).padStart(2, '0');
+  const dd = String(ist.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+/**
+ * Extract the attendance day key from a timestamp string.
+ * Uses the same 8 AM IST cutoff logic.
+ */
+const getDayKeyFromTimestamp = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  const utcMs = date.getTime() + date.getTimezoneOffset() * 60000;
+  const ist = new Date(utcMs + 330 * 60000);
+  if (ist.getHours() < 8) {
+    ist.setDate(ist.getDate() - 1);
+  }
+  const yyyy = ist.getFullYear();
+  const mm = String(ist.getMonth() + 1).padStart(2, '0');
+  const dd = String(ist.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
 
 export const ParticipantDashboard: React.FC = () => {
   const { user } = useAuthStore();
@@ -13,6 +64,10 @@ export const ParticipantDashboard: React.FC = () => {
   const [historyQuizzes, setHistoryQuizzes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Attendance state
+  const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>([]);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -34,7 +89,7 @@ export const ParticipantDashboard: React.FC = () => {
         for (const quiz of allQuizzes) {
           const participantDoc = await getDoc(doc(db, 'participants', `${quiz.id}_${user.uid}`));
           const resultDoc = await getDoc(doc(db, 'results', `${quiz.id}_${user.uid}`));
-          
+
           let hasCompleted = false;
           let isDisqualified = false;
           let score = 0;
@@ -71,6 +126,128 @@ export const ParticipantDashboard: React.FC = () => {
     fetchDashboardData();
   }, [user]);
 
+  // Listen for attendance records in real-time
+  useEffect(() => {
+    if (!user?.uid || !user?.eventId) return;
+
+    const q = query(
+      collection(db, 'attendance'),
+      where('userId', '==', user.uid),
+      where('eventId', '==', user.eventId)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        status: doc.data().status,
+        timestamp: doc.data().timestamp,
+      } as CheckInRecord));
+
+      data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setCheckInRecords(data);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Check if already checked in today (based on 8AM IST reset)
+  const hasCheckedInToday = useMemo(() => {
+    const todayKey = getAttendanceDayKey();
+    return checkInRecords.some(record => getDayKeyFromTimestamp(record.timestamp) === todayKey);
+  }, [checkInRecords]);
+
+  const handleCheckIn = async () => {
+    if (!user?.uid || !user?.eventId || isCheckingIn || hasCheckedInToday) return;
+
+    setIsCheckingIn(true);
+
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      setIsCheckingIn(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+
+        // Target coordinates provided by the user
+        const TARGET_LAT = 8.7284173439603;
+        const TARGET_LNG = 77.72321602405707;
+        const ALLOWED_RADIUS = 50; // 50 meters
+
+        const getDistanceFromLatLonInM = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+          const R = 6371e3; // Radius of the earth in m
+          const dLat = (lat2 - lat1) * (Math.PI / 180);
+          const dLon = (lon2 - lon1) * (Math.PI / 180);
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          return R * c;
+        };
+
+        const distance = getDistanceFromLatLonInM(userLat, userLng, TARGET_LAT, TARGET_LNG);
+
+        if (distance > ALLOWED_RADIUS) {
+          alert("Incorrect Location. You must be within the allowed premises to check in.");
+          setIsCheckingIn(false);
+          return;
+        }
+
+        try {
+          const now = new Date().toISOString();
+          await addDoc(collection(db, 'attendance'), {
+            userId: user.uid,
+            participantName: user.name || 'Unknown',
+            participantEmail: user.email || 'Unknown',
+            eventId: user.eventId,
+            status: 'Check In',
+            timestamp: now,
+          });
+        } catch (error) {
+          console.error('Error checking in:', error);
+          alert('Failed to check in. Please try again.');
+        } finally {
+          setIsCheckingIn(false);
+        }
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        alert("Unable to retrieve your location. Please ensure location permissions are granted.");
+        setIsCheckingIn(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata'
+    });
+  };
+
+  const formatDateOnly = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      timeZone: 'Asia/Kolkata'
+    });
+  };
+
   if (loading) {
     return <div className="p-12 text-center text-muted-foreground animate-pulse">Loading your dashboard...</div>;
   }
@@ -85,7 +262,7 @@ export const ParticipantDashboard: React.FC = () => {
       {/* Available Assessments Section */}
       <section className="space-y-4">
         <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Clock className="w-5 h-5 text-primary" /> 
+          <Clock className="w-5 h-5 text-primary" />
           Available Assessments
         </h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -127,7 +304,7 @@ export const ParticipantDashboard: React.FC = () => {
       {/* History Section */}
       <section className="space-y-4 pt-4 border-t border-border/50">
         <h2 className="text-xl font-semibold flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-muted-foreground" /> 
+          <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
           Assessment History
         </h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -164,6 +341,114 @@ export const ParticipantDashboard: React.FC = () => {
         </div>
       </section>
 
+      {/* Attendance Section */}
+      <section className="space-y-4 pt-4 border-t border-border/50">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <ClipboardCheck className="w-5 h-5 text-primary" />
+          Attendance
+        </h2>
+
+        <Card>
+          <CardContent className="p-6 space-y-6">
+            {/* Check In Button */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground mb-1">Mark Your Attendance</p>
+                <p className="text-xs text-muted-foreground">
+                  {hasCheckedInToday
+                    ? 'You have already checked in today. Next check-in available tomorrow.'
+                    : 'Click the button to check in for today.'}
+                </p>
+              </div>
+              <button
+                id="attendance-checkin-btn"
+                onClick={handleCheckIn}
+                disabled={hasCheckedInToday || isCheckingIn}
+                className={`
+                  flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-white
+                  shadow-lg transition-all duration-300 transform
+                  ${hasCheckedInToday
+                    ? 'bg-red-500 cursor-not-allowed opacity-90 shadow-red-500/25'
+                    : 'bg-green-500 hover:bg-green-600 hover:shadow-green-500/40 hover:scale-105 active:scale-95 shadow-green-500/30 cursor-pointer'
+                  }
+                  disabled:hover:scale-100
+                `}
+              >
+                {hasCheckedInToday ? (
+                  <>
+                    <XCircle className="w-5 h-5" />
+                    Checked In
+                  </>
+                ) : isCheckingIn ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Checking In...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    Check In
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Attendance History Table */}
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <CalendarCheck className="w-4 h-4 text-primary" />
+                Check-In History
+              </h3>
+              {checkInRecords.length > 0 ? (
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs uppercase bg-muted text-muted-foreground">
+                      <tr>
+                        <th className="px-6 py-3 font-semibold">Date</th>
+                        <th className="px-6 py-3 font-semibold">Status</th>
+                        <th className="px-6 py-3 font-semibold">Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {checkInRecords.map((record) => (
+                        <tr key={record.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                          <td className="px-6 py-4 font-medium">
+                            <div className="flex items-center gap-2">
+                              <CalendarCheck className="w-3.5 h-3.5 text-primary" />
+                              {formatDateOnly(record.timestamp)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                              {record.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-3.5 h-3.5" />
+                              {formatTimestamp(record.timestamp)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center text-muted-foreground border rounded-xl border-dashed bg-muted/10">
+                  <ClipboardCheck className="w-10 h-10 mx-auto mb-3 text-muted-foreground/40" />
+                  <p className="font-medium">No attendance records yet</p>
+                  <p className="text-xs mt-1">Your daily check-in history will appear here.</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
     </div>
   );
 };
+
+
