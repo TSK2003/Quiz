@@ -165,25 +165,6 @@ export const QuizzesPage: React.FC = () => {
     }
   };
 
-  const handleDuplicate = async (quiz: any) => {
-    try {
-      const { id, ...quizData } = quiz;
-      const newQuizData = {
-        ...quizData,
-        name: `${quiz.name} (Copy)`,
-        status: 'draft',
-        eventId: eventId,
-        createdAt: new Date().toISOString()
-      };
-      const docRef = await addDoc(collection(db, 'quizzes'), newQuizData);
-      setQuizzes([...quizzes, { id: docRef.id, ...newQuizData }]);
-      addToast("Quiz duplicated successfully", 'success');
-    } catch (error) {
-      console.error("Error duplicating quiz:", error);
-      addToast("Failed to duplicate quiz", 'error');
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
