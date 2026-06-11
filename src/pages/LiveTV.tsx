@@ -53,15 +53,17 @@ export const LiveTV: React.FC = () => {
         unsubscribeQuizzes = onSnapshot(quizzesQuery, async (snap) => {
           const quizzes = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
           
+          const validQuizzes = quizzes.filter(q => q.status === 'active' || q.status === 'completed');
+          
           // Sort quizzes by updatedAt descending to find the most recently modified one
-          quizzes.sort((a, b) => {
+          validQuizzes.sort((a, b) => {
             const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
             const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
             return timeB - timeA;
           });
           
-          if (quizzes.length > 0) {
-            const latestQuiz = quizzes[0];
+          if (validQuizzes.length > 0) {
+            const latestQuiz = validQuizzes[0];
             
             if (latestQuiz.status === 'completed') {
               // Quiz just finished! Switch to answers mode

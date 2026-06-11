@@ -139,19 +139,20 @@ export const LoginPage: React.FC = () => {
                   {...register('password')}
                   className={errors.password ? 'border-destructive focus-visible:ring-destructive pr-10' : 'pr-10'}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                >{showPassword ? <EyeOff className="h-4 w-4 cursor-pointer hover:text-red-500" /> : <Eye className="h-4 w-4 cursor-pointer hover:text-red-500" />}
+                </button>
+              </div>
+              <div className="flex justify-end mt-1">
                 <button 
                   type="button" 
                   onClick={() => setIsForgotModalOpen(true)}
                   className="text-xs font-medium text-primary hover:underline hover:cursor-pointer"
                 >
                   Forgot Password?
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}

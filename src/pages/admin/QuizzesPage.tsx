@@ -243,9 +243,7 @@ export const QuizzesPage: React.FC = () => {
                             </>
                           )}
                           <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => handleDuplicate(quiz)}>Duplicate</Button>
-                          {quiz.status !== 'archived' && (
-                            <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => handleUpdateStatus(quiz.id, 'archived')}>Archive</Button>
-                          )}
+
                           <Button size="sm" variant="destructive" className="cursor-pointer" onClick={() => setQuizToDelete(quiz.id)}>Delete</Button>
                         </div>
                       </td>

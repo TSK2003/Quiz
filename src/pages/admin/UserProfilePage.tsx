@@ -259,6 +259,20 @@ export const UserProfilePage: React.FC = () => {
                   <span>{userData.createdAt ? new Date(userData.createdAt).toLocaleDateString('en-IN') : '—'}</span>
                 </div>
               </div>
+
+              {/* Enrolled Events List */}
+              {userData.enrollments && userData.enrollments.length > 0 && (
+                <div className="pt-4 mt-4 border-t border-border/50">
+                  <h3 className="text-sm font-semibold mb-2 text-foreground">Enrolled Events & Courses</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {userData.enrollments.map((en: any, idx: number) => (
+                      <span key={idx} className="px-3 py-1 bg-muted rounded-full text-xs font-medium border text-muted-foreground">
+                        {en.eventName || en.eventId} — {en.courseName || en.courseId}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
@@ -464,9 +478,11 @@ export const UserProfilePage: React.FC = () => {
               onChange={(e) => setSelectedEventId(e.target.value)}
             >
               <option value="">-- Choose an Event --</option>
-              {availableEvents.map(e => (
-                <option key={e.id} value={e.id}>{e.name} {e.status === 'active' ? '(Active)' : ''}</option>
-              ))}
+              {availableEvents
+                .filter(e => !(userData.enrollments || []).some((en: any) => en.eventId === e.id))
+                .map(e => (
+                  <option key={e.id} value={e.id}>{e.name} {e.status === 'active' ? '(Active)' : ''}</option>
+                ))}
             </select>
           </div>
           <div className="space-y-2">
