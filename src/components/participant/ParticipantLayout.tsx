@@ -13,7 +13,7 @@ export const ParticipantLayout: React.FC = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const isExamActive = location.pathname.includes('/quiz/');
+  const isExamActive = location.pathname.includes('/quiz/') || location.pathname.includes('/results/');
 
   useEffect(() => {
     if (user && user.role !== 'participant') {

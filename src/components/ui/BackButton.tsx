@@ -27,10 +27,10 @@ export const BackButton: React.FC<{ className?: string }> = ({ className }) => {
       variant="ghost" 
       size="sm" 
       onClick={handleBack} 
-      className={`gap-2 text-muted-foreground hover:text-foreground hover:bg-secondary/80 ${className || ''}`}
+      className={`gap-1 sm:gap-2 px-2 sm:px-3 text-muted-foreground hover:text-foreground hover:bg-secondary/80 ${className || ''}`}
     >
-      <ArrowLeft className="w-4 h-4" />
-      Back
+      <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+      <span className="hidden sm:inline">Back</span>
     </Button>
   );
 };
