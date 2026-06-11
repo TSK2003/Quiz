@@ -36,6 +36,10 @@ export const ParticipantsAttendancePage: React.FC = () => {
     timestamp: ''
   });
 
+  // Location Modal State
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [locationForm, setLocationForm] = useState({ latitude: '', longitude: '' });
+
   useEffect(() => {
     if (!eventId) return;
 
@@ -116,36 +120,30 @@ export const ParticipantsAttendancePage: React.FC = () => {
     setEditingId(null);
   };
 
-  const handleUpdateLocation = () => {
-    if (!navigator.geolocation) {
-      addToast('Geolocation is not supported by your browser', 'error');
+  const handleSaveLocation = async () => {
+    if (!eventId) return;
+    
+    const lat = parseFloat(locationForm.latitude);
+    const lng = parseFloat(locationForm.longitude);
+    
+    if (isNaN(lat) || isNaN(lng)) {
+      addToast('Please enter valid numbers for latitude and longitude', 'error');
       return;
     }
 
-    if (!eventId) return;
-
     setIsUpdatingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          await updateDoc(doc(db, 'events', eventId), {
-            location: { latitude, longitude }
-          });
-          addToast('Event location updated successfully', 'success');
-        } catch (error) {
-          console.error('Error updating location:', error);
-          addToast('Failed to update event location', 'error');
-        } finally {
-          setIsUpdatingLocation(false);
-        }
-      },
-      (error) => {
-        console.error('Error getting location:', error);
-        addToast('Failed to get your location. Please check browser permissions.', 'error');
-        setIsUpdatingLocation(false);
-      }
-    );
+    try {
+      await updateDoc(doc(db, 'events', eventId), {
+        location: { latitude: lat, longitude: lng }
+      });
+      addToast('Event location updated successfully', 'success');
+      setIsLocationModalOpen(false);
+    } catch (error) {
+      console.error('Error updating location:', error);
+      addToast('Failed to update event location', 'error');
+    } finally {
+      setIsUpdatingLocation(false);
+    }
   };
 
   const filteredRecords = records.filter(record => {
@@ -165,7 +163,7 @@ export const ParticipantsAttendancePage: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight">Participants Attendance</h1>
           <p className="text-muted-foreground">Monitor Participants Attendances</p>
         </div>
-        <Button onClick={handleUpdateLocation} isLoading={isUpdatingLocation} className="gap-2 shrink-0">
+        <Button onClick={() => setIsLocationModalOpen(true)} className="gap-2 shrink-0">
           <MapPin className="w-4 h-4" />
           Update Event Location
         </Button>
@@ -403,6 +401,44 @@ export const ParticipantsAttendancePage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Location Modal */}
+      {isLocationModalOpen && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-lg border-border">
+            <CardHeader>
+              <CardTitle>Update Event Location</CardTitle>
+              <CardDescription>Enter the latitude and longitude for the event.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Latitude</label>
+                <input 
+                  type="text" 
+                  value={locationForm.latitude} 
+                  onChange={(e) => setLocationForm({...locationForm, latitude: e.target.value})}
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="e.g. 12.9716"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Longitude</label>
+                <input 
+                  type="text" 
+                  value={locationForm.longitude} 
+                  onChange={(e) => setLocationForm({...locationForm, longitude: e.target.value})}
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="e.g. 77.5946"
+                />
+              </div>
+            </CardContent>
+            <div className="flex justify-end gap-3 p-6 pt-0">
+              <Button variant="ghost" onClick={() => setIsLocationModalOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveLocation} isLoading={isUpdatingLocation}>Save Location</Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

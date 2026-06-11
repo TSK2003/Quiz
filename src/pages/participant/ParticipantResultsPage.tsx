@@ -126,50 +126,42 @@ export const ParticipantResultsPage: React.FC = () => {
               const isSkipped = !userAnswer;
 
               return (
-                <Card key={q.id} className={`overflow-hidden border-l-4 ${isCorrect ? 'border-l-success' : isSkipped ? 'border-l-muted-foreground' : 'border-l-destructive'}`}>
+                <Card key={q.id} className={`overflow-hidden border-l-4 shadow-sm ${isCorrect ? 'border-l-green-500' : isSkipped ? 'border-l-gray-400' : 'border-l-red-500'}`}>
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       <div className="shrink-0 mt-1">
                         {isCorrect ? (
-                          <CheckCircle2 className="w-6 h-6 text-success" />
+                          <CheckCircle2 className="w-6 h-6 text-green-600" />
                         ) : isSkipped ? (
-                          <div className="w-6 h-6 rounded-full border-2 border-muted-foreground/50 flex items-center justify-center text-xs font-bold text-muted-foreground">-</div>
+                          <div className="w-6 h-6 rounded-full border-2 border-gray-400 flex items-center justify-center text-xs font-bold text-gray-500">-</div>
                         ) : (
-                          <XCircle className="w-6 h-6 text-destructive" />
+                          <XCircle className="w-6 h-6 text-red-600" />
                         )}
                       </div>
                       <div className="flex-1 space-y-4">
-                        <div className="space-y-1">
-                          <span className="text-sm font-semibold text-muted-foreground">Question {index + 1}</span>
-                          <p className="text-base font-medium leading-relaxed">{q.question}</p>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold px-2 py-1 bg-primary/10 text-primary rounded-md">Q{index + 1}</span>
+                          </div>
+                          <h3 className="text-lg font-bold text-foreground leading-snug">{q.question}</h3>
                         </div>
                         
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {['A', 'B', 'C', 'D'].map((opt: string) => {
-                            const optionKey = `option${opt}` as keyof typeof q;
-                            const optionText = q[optionKey] as string;
-                            const isSelected = userAnswer === opt;
-                            const isActuallyCorrect = q.correctAnswer === opt;
-                            
-                            let optionClass = "p-3 rounded-lg border text-sm font-medium transition-colors text-black ";
-                            
-                            if (isActuallyCorrect) {
-                              optionClass += "bg-success/10 border-success/30 ring-1 ring-success/50";
-                            } else if (isSelected && !isActuallyCorrect) {
-                              optionClass += "bg-destructive/10 border-destructive/30 ring-1 ring-destructive/50";
-                            } else {
-                              optionClass += "bg-muted/30 border-border/50 opacity-60";
-                            }
+                        <div className="flex flex-col gap-3 mt-2">
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+                            <span className="text-xs font-bold text-green-700 uppercase tracking-wider w-32 shrink-0">Correct Answer:</span>
+                            <span className="text-sm font-bold text-green-900">{q[`option${q.correctAnswer}` as keyof typeof q] as string}</span>
+                          </div>
 
-                            return (
-                              <div key={opt} className={optionClass}>
-                                <span className="font-bold mr-2">{opt}.</span>
-                                {optionText}
-                                {isActuallyCorrect && <span className="ml-2 text-xs font-bold uppercase tracking-wider opacity-80">(Correct Answer)</span>}
-                                {isSelected && !isActuallyCorrect && <span className="ml-2 text-xs font-bold uppercase tracking-wider opacity-80">(Your Answer)</span>}
-                              </div>
-                            );
-                          })}
+                          {!isCorrect && (
+                            <div className={`flex items-center gap-3 p-3 rounded-lg border ${isSkipped ? 'bg-gray-50 border-gray-200' : 'bg-red-50 border-red-200'}`}>
+                              <span className={`text-xs font-bold uppercase tracking-wider w-32 shrink-0 ${isSkipped ? 'text-gray-600' : 'text-red-700'}`}>
+                                Your Answer:
+                              </span>
+                              <span className={`text-sm font-bold ${isSkipped ? 'text-gray-700' : 'text-red-900'}`}>
+                                {isSkipped ? 'Skipped' : q[`option${userAnswer}` as keyof typeof q] as string}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

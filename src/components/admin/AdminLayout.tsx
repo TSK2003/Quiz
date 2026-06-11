@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { auth } from '../../config/firebase';
 import { signOut } from 'firebase/auth';
@@ -13,6 +13,9 @@ import logo from '../../assets/hero1.png';
 export const AdminLayout: React.FC = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isDashboard = location.pathname === '/admin/dashboard' || location.pathname === '/admin';
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -30,8 +33,8 @@ export const AdminLayout: React.FC = () => {
       <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-background/80 border-b border-border/50 supports-[backdrop-filter]:bg-background/60 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <BackButton />
-            <div className="h-6 w-px bg-border hidden sm:block"></div>
+            {!isDashboard && <BackButton />}
+            {!isDashboard && <div className="h-6 w-px bg-border hidden sm:block"></div>}
             <img src={logo} alt="AESCION Logo" className="h-8 w-auto object-contain" />
           </div>
           <div className="flex items-center gap-4">
