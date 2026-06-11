@@ -299,11 +299,11 @@ export const ParticipantDashboard: React.FC = () => {
               value={`${user.eventId}|${user.courseId}`}
               onChange={(e) => {
                 const [eId, cId] = e.target.value.split('|');
-                const selected = user.enrollments.find((en: any) => en.eventId === eId && en.courseId === cId);
+                const selected = user?.enrollments?.find((en: any) => en.eventId === eId && en.courseId === cId);
                 if (selected) handleSwitchEvent(selected);
               }}
             >
-              {user.enrollments.map((en: any, i: number) => (
+              {user?.enrollments?.map((en: any, i: number) => (
                 <option key={i} value={`${en.eventId}|${en.courseId}`}>
                   {en.eventName || en.eventId} - {en.courseName || en.courseId}
                 </option>
