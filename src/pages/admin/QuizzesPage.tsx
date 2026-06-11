@@ -22,7 +22,7 @@ export const QuizzesPage: React.FC = () => {
       const q = query(collection(db, 'quizzes'), where('eventId', '==', eventId));
       const querySnapshot = await getDocs(q);
       const fetchedQuizzes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setQuizzes(fetchedQuizzes);
+      setQuizzes(fetchedQuizzes.filter((q: any) => q.status !== 'archived'));
     } catch (error) {
       console.error("Error fetching quizzes:", error);
     } finally {

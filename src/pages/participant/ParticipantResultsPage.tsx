@@ -94,13 +94,13 @@ export const ParticipantResultsPage: React.FC = () => {
               <div className="text-2xl font-bold">{result.score}</div>
               <div className="text-sm font-medium text-muted-foreground">Total Score</div>
             </div>
-            <div className="bg-success/10 border border-success/20 text-success-foreground p-4 rounded-xl">
-              <div className="text-2xl font-bold">{result.correctAnswers}</div>
-              <div className="text-sm font-medium">Correct</div>
+            <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-xl">
+              <div className="text-2xl font-bold text-green-800">{result.correctAnswers}</div>
+              <div className="text-sm font-medium text-green-600">Correct</div>
             </div>
-            <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-xl">
-              <div className="text-2xl font-bold">{result.wrongAnswers}</div>
-              <div className="text-sm font-medium">Wrong</div>
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl">
+              <div className="text-2xl font-bold text-red-800">{result.wrongAnswers}</div>
+              <div className="text-sm font-medium text-red-600">Wrong</div>
             </div>
             <div className="bg-muted/50 border border-border/50 p-4 rounded-xl">
               <div className="text-2xl font-bold">{result.score + result.wrongAnswers}</div>
@@ -143,7 +143,7 @@ export const ParticipantResultsPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold px-2 py-1 bg-primary/10 text-primary rounded-md">Q{index + 1}</span>
                           </div>
-                          <h3 className="text-lg font-bold text-foreground leading-snug">{q.question}</h3>
+                          <h3 className="text-lg font-bold text-foreground leading-snug">{q.text}</h3>
                         </div>
                         
                         <div className="flex flex-col gap-3 mt-2">
