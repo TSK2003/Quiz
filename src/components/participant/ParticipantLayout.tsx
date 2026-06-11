@@ -15,6 +15,9 @@ export const ParticipantLayout: React.FC = () => {
   const location = useLocation();
   const isExamActive = location.pathname.includes('/quiz/') || location.pathname.includes('/results/');
 
+  const isDashboard = location.pathname === '/participant/dashboard' || location.pathname === '/participant';
+  const hideBackButton = isExamActive || isDashboard;
+
   useEffect(() => {
     if (user && user.role !== 'participant') {
       navigate('/admin/dashboard');
@@ -31,8 +34,8 @@ export const ParticipantLayout: React.FC = () => {
       <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-background/80 border-b border-border/50 supports-[backdrop-filter]:bg-background/60 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {!isExamActive && <BackButton />}
-            {!isExamActive && <div className="h-6 w-px bg-border hidden sm:block"></div>}
+            {!hideBackButton && <BackButton />}
+            {!hideBackButton && <div className="h-6 w-px bg-border hidden sm:block"></div>}
             <img src={logo} alt="AESCION Logo" className="h-8 w-auto object-contain" />
           </div> 
           <div className="flex items-center gap-4">
