@@ -13,8 +13,8 @@ export const LiveQuizPage: React.FC = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const { 
-    questions, currentQuestionIndex, answers, timeLeft, isSubmitting,
-    setQuiz, answerQuestion, nextQuestion, setTimeLeft, setSubmitting, resetQuiz 
+    questions, currentQuestionIndex, answers, timeLeft, globalTimeLeft, isSubmitting,
+    setQuiz, answerQuestion, nextQuestion, setTimeLeft, setGlobalTimeLeft, setSubmitting, resetQuiz 
   } = useQuizStore();
 
   const [loading, setLoading] = useState(true);
@@ -23,6 +23,7 @@ export const LiveQuizPage: React.FC = () => {
   const [warningMessage, setWarningMessage] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const globalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const requestFullscreen = () => {
     if (document.documentElement.requestFullscreen) {
@@ -118,13 +119,19 @@ export const LiveQuizPage: React.FC = () => {
           return;
         }
 
+        let durationMinutes = 30; // default
+        const quizSnap = await getDoc(doc(db, 'quizzes', quizId));
+        if (quizSnap.exists()) {
+          durationMinutes = quizSnap.data().duration || 30;
+        }
+
         const qSetId = pData.qSetDocId;
         const qSetSnap = await getDoc(doc(db, 'questionSets', qSetId));
         
         if (qSetSnap.exists()) {
           const qsData = qSetSnap.data();
           const loadedQuestions = qsData.questions.map((q: any, index: number) => ({ id: `q${index}`, ...q }));
-          setQuiz(quizId, loadedQuestions);
+          setQuiz(quizId, loadedQuestions, durationMinutes);
         }
       } catch (err) {
         console.error("Error loading quiz data", err);
@@ -202,6 +209,11 @@ export const LiveQuizPage: React.FC = () => {
   useEffect(() => {
     if (loading || isSubmitting || questions.length === 0) return;
 
+    if (globalTimeLeft <= 0) {
+      handleAutoSubmit();
+      return;
+    }
+
     if (timeLeft === 0) {
       if (currentQuestionIndex < questions.length - 1) {
         nextQuestion();
@@ -215,10 +227,15 @@ export const LiveQuizPage: React.FC = () => {
       setTimeLeft(timeLeft - 1);
     }, 1000);
 
+    globalTimerRef.current = setTimeout(() => {
+      setGlobalTimeLeft(globalTimeLeft - 1);
+    }, 1000);
+
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (globalTimerRef.current) clearTimeout(globalTimerRef.current);
     };
-  }, [timeLeft, loading, isSubmitting, questions.length, currentQuestionIndex, nextQuestion, handleAutoSubmit, setTimeLeft]);
+  }, [timeLeft, globalTimeLeft, loading, isSubmitting, questions.length, currentQuestionIndex, nextQuestion, handleAutoSubmit, setTimeLeft, setGlobalTimeLeft]);
 
   if (loading) return <div className="flex justify-center items-center h-screen">Loading Quiz Environment...</div>;
 
@@ -235,14 +252,46 @@ export const LiveQuizPage: React.FC = () => {
     }
   };
 
+  const updateLiveResult = async (questionId: string, answer: string) => {
+    if (!quizId || !user) return;
+    
+    const newAnswers = { ...answers, [questionId]: answer };
+    let score = 0;
+    questions.forEach((q) => {
+      if (newAnswers[q.id] === q.correctAnswer) {
+        score += 1;
+      }
+    });
+
+    try {
+      await setDoc(doc(db, 'results', `${quizId}_${user.uid}`), {
+        userId: user.uid,
+        userName: user.name,
+        courseId: user.courseId || '',
+        quizId,
+        score,
+        lastAnswerAt: serverTimestamp(),
+        isDisqualified: false,
+      }, { merge: true });
+    } catch (e) {
+      console.error('Error updating live result', e);
+    }
+  };
+
+  const handleSelectAnswer = (questionId: string, answer: string) => {
+    answerQuestion(questionId, answer);
+    updateLiveResult(questionId, answer);
+  };
+
   return (
     <div className="max-w-3xl mx-auto w-full pt-8 select-none" ref={containerRef}>
       <div className="flex justify-between items-center mb-6">
         <div className="text-sm font-medium text-muted-foreground">
           Question {currentQuestionIndex + 1} of {questions.length}
         </div>
-        <div className={`px-4 py-2 rounded-full font-bold text-lg ${timeLeft <= 5 ? 'bg-destructive/20 text-destructive animate-pulse' : 'bg-primary/10 text-primary'}`}>
-          {timeLeft}s
+        <div className={`px-4 py-2 rounded-full font-bold text-lg flex items-center gap-4 ${timeLeft <= 5 ? 'bg-destructive/20 text-destructive animate-pulse' : 'bg-primary/10 text-primary'}`}>
+          <span className="text-sm border-r border-current pr-4">Total: {Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}</span>
+          <span>{timeLeft}s</span>
         </div>
       </div>
 
@@ -265,7 +314,7 @@ export const LiveQuizPage: React.FC = () => {
                 return (
                   <button
                     key={opt}
-                    onClick={() => answerQuestion(question.id, opt)}
+                    onClick={() => handleSelectAnswer(question.id, opt)}
                     className={`w-full text-left p-4 rounded-lg border transition-all ${
                       isSelected 
                         ? 'border-primary bg-primary/10 ring-1 ring-primary' 

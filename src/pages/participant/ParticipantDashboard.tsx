@@ -115,7 +115,15 @@ export const ParticipantDashboard: React.FC = () => {
           }
         }
 
-        setAvailableQuizzes(available);
+        // 3. Check if the current event is active
+        const eventDoc = await getDoc(doc(db, 'events', user.eventId));
+        if (eventDoc.exists() && eventDoc.data().status !== 'active') {
+          // If the event is not active, do not allow starting any quizzes from it
+          setAvailableQuizzes([]);
+        } else {
+          setAvailableQuizzes(available);
+        }
+
         setHistoryQuizzes(history);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);

@@ -33,11 +33,18 @@ export const UsersPage: React.FC = () => {
       const fetchedCourses = coursesSnap.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
       setCourses(fetchedCourses);
 
-      const q = query(collection(db, 'users'), where('eventId', '==', eventId));
-      const querySnapshot = await getDocs(q);
-      const fetchedUsers = querySnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as any))
-        .filter(user => user.role === 'participant');
+      const q1 = query(collection(db, 'users'), where('eventId', '==', eventId));
+      const q2 = query(collection(db, 'users'), where('eventIds', 'array-contains', eventId));
+      
+      const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+      
+      const userMap = new Map();
+      snap1.docs.forEach(doc => userMap.set(doc.id, { id: doc.id, ...doc.data() } as any));
+      snap2.docs.forEach(doc => userMap.set(doc.id, { id: doc.id, ...doc.data() } as any));
+      
+      const fetchedUsers = Array.from(userMap.values())
+        .filter((user: any) => user.role === 'participant');
+        
       setUsers(fetchedUsers);
     } catch (error) {
       console.error("Error fetching data:", error);

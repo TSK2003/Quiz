@@ -95,6 +95,7 @@ export const RegisterPage: React.FC = () => {
         eventId: activeEventId,
         courseId: data.courseId,
         enrollments: [{ eventId: activeEventId, courseId: data.courseId }],
+        eventIds: activeEventId ? [activeEventId] : [],
         role: 'participant',
         status: 'pending',
         password: data.password,

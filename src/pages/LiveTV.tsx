@@ -111,21 +111,27 @@ export const LiveTV: React.FC = () => {
     const q = query(collection(db, 'results'), where('quizId', '==', activeQuizId));
     const unsubscribe = onSnapshot(q, (snap) => {
       let data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      // Removed activeUsers filter so any result for this quiz is shown
       
       data.sort((a, b) => {
         if (b.score !== a.score) {
           return b.score - a.score;
         }
-        const timeA = a.completedAt?.toMillis?.() || new Date(a.completedAt || 0).getTime() || 0;
-        const timeB = b.completedAt?.toMillis?.() || new Date(b.completedAt || 0).getTime() || 0;
+        const timeA = a.lastAnswerAt?.toMillis?.() || a.completedAt?.toMillis?.() || new Date(a.lastAnswerAt || a.completedAt || 0).getTime() || 0;
+        const timeB = b.lastAnswerAt?.toMillis?.() || b.completedAt?.toMillis?.() || new Date(b.lastAnswerAt || b.completedAt || 0).getTime() || 0;
         return timeA - timeB;
       });
       
       setResults(data.slice(0, 10));
     });
 
-    return () => unsubscribe();
+    const refreshInterval = setInterval(() => {
+      setResults(prevResults => [...prevResults]);
+    }, 5000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(refreshInterval);
+    };
   }, [activeUsers, mode, activeQuizId]);
 
   const getRankIcon = (index: number) => {

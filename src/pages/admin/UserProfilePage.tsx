@@ -69,7 +69,8 @@ export const UserProfilePage: React.FC = () => {
       };
 
       await updateDoc(doc(db, 'users', userId), {
-        enrollments: arrayUnion(newEnrollment)
+        enrollments: arrayUnion(newEnrollment),
+        eventIds: arrayUnion(selectedEventId)
       });
 
       addToast('Event access granted successfully!', 'success');
@@ -96,11 +97,27 @@ export const UserProfilePage: React.FC = () => {
         // 1. Fetch user data
         const userDoc = await getDoc(doc(db, 'users', userId));
         if (userDoc.exists()) {
-          setUserData({ id: userDoc.id, ...userDoc.data() });
+          const uData = userDoc.data();
+
+          if (uData.enrollments && Array.isArray(uData.enrollments)) {
+            for (let i = 0; i < uData.enrollments.length; i++) {
+              const en = uData.enrollments[i];
+              if (!en.eventName && en.eventId) {
+                const eDoc = await getDoc(doc(db, 'events', en.eventId));
+                if (eDoc.exists()) en.eventName = eDoc.data().name;
+              }
+              if (!en.courseName && en.courseId) {
+                const cDoc = await getDoc(doc(db, 'courses', en.courseId));
+                if (cDoc.exists()) en.courseName = cDoc.data().name;
+              }
+            }
+          }
+
+          setUserData({ id: userDoc.id, ...uData });
 
           // Get course name
-          if (userDoc.data().courseId) {
-            const courseDoc = await getDoc(doc(db, 'courses', userDoc.data().courseId));
+          if (uData.courseId) {
+            const courseDoc = await getDoc(doc(db, 'courses', uData.courseId));
             if (courseDoc.exists()) {
               setCourseName(courseDoc.data().name);
             }
