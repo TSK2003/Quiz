@@ -14,6 +14,7 @@ export const LiveTV: React.FC = () => {
   // New state for Answers Mode
   const [mode, setMode] = useState<'leaderboard' | 'answers'>('leaderboard');
   const [completedQuiz, setCompletedQuiz] = useState<any>(null);
+  const [activeQuizId, setActiveQuizId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
 
   useEffect(() => {
@@ -53,7 +54,11 @@ export const LiveTV: React.FC = () => {
           const quizzes = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
           
           // Sort quizzes by updatedAt descending to find the most recently modified one
-          quizzes.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+          quizzes.sort((a, b) => {
+            const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+            const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+            return timeB - timeA;
+          });
           
           if (quizzes.length > 0) {
             const latestQuiz = quizzes[0];
@@ -61,6 +66,7 @@ export const LiveTV: React.FC = () => {
             if (latestQuiz.status === 'completed') {
               // Quiz just finished! Switch to answers mode
               setCompletedQuiz(latestQuiz);
+              setActiveQuizId(null);
               setMode('answers');
               
               // Fetch the questions for this quiz to show the answers
@@ -75,6 +81,7 @@ export const LiveTV: React.FC = () => {
               // Quiz is active or draft, show leaderboard
               setMode('leaderboard');
               setCompletedQuiz(null);
+              setActiveQuizId(latestQuiz.id);
             }
           }
         });
@@ -94,25 +101,30 @@ export const LiveTV: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (mode !== 'leaderboard') return;
+    if (mode !== 'leaderboard' || !activeQuizId) {
+      setResults([]);
+      return;
+    }
 
-    const q = query(collection(db, 'results'));
+    const q = query(collection(db, 'results'), where('quizId', '==', activeQuizId));
     const unsubscribe = onSnapshot(q, (snap) => {
       let data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      data = data.filter(result => activeUsers.has(result.userId));
+      // Removed activeUsers filter so any result for this quiz is shown
       
       data.sort((a, b) => {
         if (b.score !== a.score) {
           return b.score - a.score;
         }
-        return new Date(a.completedAt || 0).getTime() - new Date(b.completedAt || 0).getTime();
+        const timeA = a.completedAt?.toMillis?.() || new Date(a.completedAt || 0).getTime() || 0;
+        const timeB = b.completedAt?.toMillis?.() || new Date(b.completedAt || 0).getTime() || 0;
+        return timeA - timeB;
       });
       
       setResults(data.slice(0, 10));
     });
 
     return () => unsubscribe();
-  }, [activeUsers, mode]);
+  }, [activeUsers, mode, activeQuizId]);
 
   const getRankIcon = (index: number) => {
     switch(index) {

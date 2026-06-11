@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { db } from '../../config/firebase';
-import { collection, query, where, getDocs, doc, getDoc, addDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, addDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Link, useNavigate } from 'react-router-dom';
@@ -161,6 +161,28 @@ export const ParticipantDashboard: React.FC = () => {
 
     setIsCheckingIn(true);
 
+    let targetLat: number, targetLng: number, allowedRadius: number;
+
+    try {
+      const eventDoc = await getDoc(doc(db, 'events', user.eventId));
+      const eventData = eventDoc.data();
+      
+      if (!eventData?.location?.latitude || !eventData?.location?.longitude || !eventData?.location?.radius) {
+        alert("Attendance location has not been configured by the admin yet.");
+        setIsCheckingIn(false);
+        return;
+      }
+      
+      targetLat = parseFloat(eventData.location.latitude);
+      targetLng = parseFloat(eventData.location.longitude);
+      allowedRadius = parseFloat(eventData.location.radius);
+    } catch (error) {
+      console.error("Error fetching event location:", error);
+      alert("Failed to verify location requirements. Please try again.");
+      setIsCheckingIn(false);
+      return;
+    }
+
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser");
       setIsCheckingIn(false);
@@ -171,11 +193,6 @@ export const ParticipantDashboard: React.FC = () => {
       async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
-
-        // Target coordinates provided by the user
-        const TARGET_LAT = 8.7284173439603;
-        const TARGET_LNG = 77.72321602405707;
-        const ALLOWED_RADIUS = 50; // 50 meters
 
         const getDistanceFromLatLonInM = (lat1: number, lon1: number, lat2: number, lon2: number) => {
           const R = 6371e3; // Radius of the earth in m
@@ -189,10 +206,10 @@ export const ParticipantDashboard: React.FC = () => {
           return R * c;
         };
 
-        const distance = getDistanceFromLatLonInM(userLat, userLng, TARGET_LAT, TARGET_LNG);
+        const distance = getDistanceFromLatLonInM(userLat, userLng, targetLat, targetLng);
 
-        if (distance > ALLOWED_RADIUS) {
-          alert("Incorrect Location. You must be within the allowed premises to check in.");
+        if (distance > allowedRadius) {
+          alert(`Incorrect Location. You are ${Math.round(distance)}m away. You must be within ${allowedRadius}m of the premises to check in.`);
           setIsCheckingIn(false);
           return;
         }
@@ -252,11 +269,48 @@ export const ParticipantDashboard: React.FC = () => {
     return <div className="p-12 text-center text-muted-foreground animate-pulse">Loading your dashboard...</div>;
   }
 
+  const handleSwitchEvent = async (enrollment: any) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        eventId: enrollment.eventId,
+        courseId: enrollment.courseId
+      });
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to switch event", err);
+      alert("Failed to switch event.");
+    }
+  };
+
   return (
     <div className="space-y-10 w-full pb-12">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">My Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back, {user?.name}. Here are your assessments.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">My Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Welcome back, {user?.name}. Here are your assessments.</p>
+        </div>
+        
+        {user?.enrollments && user.enrollments.length > 1 && (
+          <div className="bg-card p-3 rounded-xl border shadow-sm flex items-center gap-3">
+            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Current Event:</span>
+            <select 
+              className="flex h-9 w-full sm:w-[200px] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={`${user.eventId}|${user.courseId}`}
+              onChange={(e) => {
+                const [eId, cId] = e.target.value.split('|');
+                const selected = user.enrollments.find((en: any) => en.eventId === eId && en.courseId === cId);
+                if (selected) handleSwitchEvent(selected);
+              }}
+            >
+              {user.enrollments.map((en: any, i: number) => (
+                <option key={i} value={`${en.eventId}|${en.courseId}`}>
+                  {en.eventName || en.eventId} - {en.courseName || en.courseId}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Available Assessments Section */}

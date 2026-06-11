@@ -18,7 +18,8 @@ import { UsersPage } from './pages/admin/UsersPage';
 import { CoursesPage } from './pages/admin/CoursesPage';
 import { QuizzesPage } from './pages/admin/QuizzesPage';
 import { QuizCreatePage } from './pages/admin/QuizCreatePage';
-import { QuizAssignPage } from './pages/admin/QuizAssignPage';
+import { UserProfilePage } from './pages/admin/UserProfilePage';
+
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { ParticipantsAttendancePage } from './pages/admin/ParticipantsAttendancePage';
 
@@ -62,10 +63,11 @@ function App() {
         }>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<UsersPage />} />
+          <Route path="users/:userId" element={<UserProfilePage />} />
           <Route path="courses" element={<CoursesPage />} />
           <Route path="quizzes" element={<QuizzesPage />} />
           <Route path="quizzes/create" element={<QuizCreatePage />} />
-          <Route path="quizzes/:quizId/assign" element={<QuizAssignPage />} />
+
           <Route path="audit-logs" element={<AuditLogsPage />} />
           <Route path="attendance" element={<ParticipantsAttendancePage />} />
         </Route>

@@ -166,9 +166,11 @@ export const EventsPage: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Events Dashboard</h1>
-        <p className="text-muted-foreground mt-2">Manage all your assessment events. Select an event to manage its users, courses, and quizzes.</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Events Dashboard</h1>
+          <p className="text-muted-foreground mt-2">Manage all your assessment events. Select an event to manage its users, courses, and quizzes.</p>
+        </div>
       </div>
 
       <Card className="border-primary/20 shadow-sm bg-primary/5">

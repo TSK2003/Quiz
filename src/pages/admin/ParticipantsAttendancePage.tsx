@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../../config/firebase';
-import { collection, query, where, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { useParams } from 'react-router-dom';
 import { UserCheck, Clock, Users, Pencil, Trash2, Search, Calendar, X, Check, MapPin } from 'lucide-react';
@@ -24,6 +24,8 @@ export const ParticipantsAttendancePage: React.FC = () => {
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const { addToast } = useToastStore();
   
+  const [viewMode, setViewMode] = useState<'detailed' | 'summary'>('detailed');
+  
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
@@ -38,7 +40,27 @@ export const ParticipantsAttendancePage: React.FC = () => {
 
   // Location Modal State
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-  const [locationForm, setLocationForm] = useState({ latitude: '', longitude: '' });
+  const [locationForm, setLocationForm] = useState({ latitude: '', longitude: '', radius: '50' });
+
+  const handleOpenLocationModal = async () => {
+    setIsLocationModalOpen(true);
+    if (!eventId) return;
+    try {
+      const eventDoc = await getDoc(doc(db, 'events', eventId));
+      if (eventDoc.exists()) {
+        const data = eventDoc.data();
+        if (data.location) {
+          setLocationForm({
+            latitude: data.location.latitude?.toString() || '',
+            longitude: data.location.longitude?.toString() || '',
+            radius: data.location.radius?.toString() || '50'
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching location:", error);
+    }
+  };
 
   useEffect(() => {
     if (!eventId) return;
@@ -125,16 +147,17 @@ export const ParticipantsAttendancePage: React.FC = () => {
     
     const lat = parseFloat(locationForm.latitude);
     const lng = parseFloat(locationForm.longitude);
+    const rad = parseFloat(locationForm.radius);
     
-    if (isNaN(lat) || isNaN(lng)) {
-      addToast('Please enter valid numbers for latitude and longitude', 'error');
+    if (isNaN(lat) || isNaN(lng) || isNaN(rad)) {
+      addToast('Please enter valid numbers for latitude, longitude, and radius', 'error');
       return;
     }
 
     setIsUpdatingLocation(true);
     try {
       await updateDoc(doc(db, 'events', eventId), {
-        location: { latitude: lat, longitude: lng }
+        location: { latitude: lat, longitude: lng, radius: rad }
       });
       addToast('Event location updated successfully', 'success');
       setIsLocationModalOpen(false);
@@ -156,6 +179,20 @@ export const ParticipantsAttendancePage: React.FC = () => {
     return matchesSearch && matchesDate;
   });
 
+  // Summary Data calculation
+  const summaryData = React.useMemo(() => {
+    const summary: Record<string, { name: string, email: string, days: number }> = {};
+    filteredRecords.forEach(record => {
+      if (!summary[record.userId]) {
+        summary[record.userId] = { name: record.participantName, email: record.participantEmail, days: 0 };
+      }
+      if (record.status === 'Check In') {
+        summary[record.userId].days += 1;
+      }
+    });
+    return Object.values(summary).sort((a, b) => b.days - a.days);
+  }, [filteredRecords]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -163,7 +200,7 @@ export const ParticipantsAttendancePage: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight">Participants Attendance</h1>
           <p className="text-muted-foreground">Monitor Participants Attendances</p>
         </div>
-        <Button onClick={() => setIsLocationModalOpen(true)} className="gap-2 shrink-0">
+        <Button onClick={handleOpenLocationModal} className="gap-2 shrink-0">
           <MapPin className="w-4 h-4" />
           Update Event Location
         </Button>
@@ -219,6 +256,21 @@ export const ParticipantsAttendancePage: React.FC = () => {
               </CardTitle>
               <CardDescription>Real-time attendance tracking for all participants.</CardDescription>
             </div>
+
+            <div className="flex bg-muted p-1 rounded-lg self-start md:self-center">
+              <button
+                onClick={() => setViewMode('detailed')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'detailed' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Detailed View
+              </button>
+              <button
+                onClick={() => setViewMode('summary')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'summary' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Summary View (Excel-like)
+              </button>
+            </div>
             
             {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-3">
@@ -257,6 +309,47 @@ export const ParticipantsAttendancePage: React.FC = () => {
             <div className="text-center py-8">
               <div className="inline-block w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-3"></div>
               <p className="text-muted-foreground">Loading attendance records...</p>
+            </div>
+          ) : viewMode === 'summary' ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs uppercase bg-muted text-muted-foreground">
+                  <tr>
+                    <th className="px-6 py-3 font-semibold">Participant Name</th>
+                    <th className="px-6 py-3 font-semibold">Email ID</th>
+                    <th className="px-6 py-3 font-semibold">Total Days Attended</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summaryData.map((data, idx) => (
+                    <tr key={idx} className="border-b border-border hover:bg-muted/50 transition-colors">
+                      <td className="px-6 py-4 font-medium">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                            {data.name?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                          <span className="font-medium">{data.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {data.email}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
+                          {data.days} Days
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {summaryData.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-12 text-center text-muted-foreground">
+                        No attendance data available.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -429,6 +522,16 @@ export const ParticipantsAttendancePage: React.FC = () => {
                   onChange={(e) => setLocationForm({...locationForm, longitude: e.target.value})}
                   className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="e.g. 77.5946"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Allowed Radius (meters)</label>
+                <input 
+                  type="text" 
+                  value={locationForm.radius} 
+                  onChange={(e) => setLocationForm({...locationForm, radius: e.target.value})}
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="e.g. 50"
                 />
               </div>
             </CardContent>

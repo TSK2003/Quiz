@@ -4,13 +4,15 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { signInWithEmailAndPassword, signOut, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, setPersistence, browserSessionPersistence, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../../config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useToastStore } from '../../store/useToastStore';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
+import { Modal } from '../../components/ui/Modal';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/Card';
 
 const loginSchema = z.object({
@@ -41,9 +43,34 @@ export const LoginPage: React.FC = () => {
     }
   }, [user, isAuthenticated, isAuthLoading, navigate, from]);
 
+  const { addToast } = useToastStore();
+
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isSendingReset, setIsSendingReset] = useState(false);
+
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail || !forgotEmail.includes('@')) {
+      addToast('Please enter a valid email address.', 'error');
+      return;
+    }
+    
+    setIsSendingReset(true);
+    try {
+      await sendPasswordResetEmail(auth, forgotEmail);
+      addToast('Password reset link sent to ' + forgotEmail, 'success');
+      setIsForgotModalOpen(false);
+      setForgotEmail('');
+    } catch (err: any) {
+      addToast(err.message || 'Failed to send password reset email', 'error');
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
@@ -112,6 +139,13 @@ export const LoginPage: React.FC = () => {
                   {...register('password')}
                   className={errors.password ? 'border-destructive focus-visible:ring-destructive pr-10' : 'pr-10'}
                 />
+                <button 
+                  type="button" 
+                  onClick={() => setIsForgotModalOpen(true)}
+                  className="text-xs font-medium text-primary hover:underline hover:cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -148,6 +182,28 @@ export const LoginPage: React.FC = () => {
           </p>
         </CardFooter>
       </Card>
+      
+      <Modal isOpen={isForgotModalOpen} onClose={() => setIsForgotModalOpen(false)} title="Reset Password">
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-muted-foreground">
+            Enter your email address and we will send you a link to reset your password.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="forgot-email">Email Address</Label>
+            <Input
+              id="forgot-email"
+              type="email"
+              placeholder="name@example.com"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="ghost" onClick={() => setIsForgotModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleForgotPassword} isLoading={isSendingReset}>Send Reset Link</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

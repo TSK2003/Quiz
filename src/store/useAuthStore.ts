@@ -8,6 +8,8 @@ export interface User {
   status: 'pending' | 'approved' | 'rejected';
   courseId?: string;
   eventId?: string;
+  questionSet?: 'A' | 'B';
+  enrollments?: { eventId: string; eventName?: string; courseId: string; courseName?: string }[];
 }
 
 interface AuthState {

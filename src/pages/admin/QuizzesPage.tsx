@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../../config/firebase';
-import { collection, query, getDocs, doc, deleteDoc, updateDoc, addDoc, where } from 'firebase/firestore';
+import { collection, query, getDocs, doc, deleteDoc, updateDoc, addDoc, where, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Link, useParams } from 'react-router-dom';
@@ -11,6 +11,7 @@ export const QuizzesPage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [startingQuiz, setStartingQuiz] = useState<string | null>(null);
   const { addToast } = useToastStore();
   const [quizToDelete, setQuizToDelete] = useState<string | null>(null);
 
@@ -44,6 +45,100 @@ export const QuizzesPage: React.FC = () => {
       addToast("Failed to delete quiz", 'error');
     } finally {
       setQuizToDelete(null);
+    }
+  };
+
+  const handleStartQuiz = async (quiz: any) => {
+    if (!eventId || startingQuiz) return;
+    setStartingQuiz(quiz.id);
+
+    try {
+      // 1. Fetch approved users for this course + event
+      const usersQ = query(collection(db, 'users'), where('eventId', '==', eventId));
+      const usersSnap = await getDocs(usersQ);
+      const approvedUsers = usersSnap.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter(u => u.courseId === quiz.courseId && u.role === 'participant' && u.status === 'approved');
+
+      if (approvedUsers.length === 0) {
+        addToast("No approved users found for this course. Please approve users first.", 'error');
+        setStartingQuiz(null);
+        return;
+      }
+
+      // 2. Fetch question sets for this quiz
+      const qSetsQ = query(collection(db, 'questionSets'), where('quizId', '==', quiz.id));
+      const qSetsSnap = await getDocs(qSetsQ);
+
+      let setA_Id = '';
+      let setB_Id = '';
+      qSetsSnap.forEach(d => {
+        if (d.data().setName === 'A') setA_Id = d.id;
+        if (d.data().setName === 'B') setB_Id = d.id;
+      });
+
+      if (!setA_Id || !setB_Id) {
+        addToast("Question sets A and B not found for this quiz.", 'error');
+        setStartingQuiz(null);
+        return;
+      }
+
+      // 3. Batch create participant records
+      const batch = writeBatch(db);
+      let assignedCount = 0;
+      let skippedCount = 0;
+
+      approvedUsers.forEach(u => {
+        const userSet = u.questionSet; // 'A' or 'B'
+        if (!userSet) {
+          skippedCount++;
+          return;
+        }
+
+        const qSetDocId = userSet === 'A' ? setA_Id : setB_Id;
+        const participantRef = doc(db, 'participants', `${quiz.id}_${u.id}`);
+
+        batch.set(participantRef, {
+          userId: u.id,
+          quizId: quiz.id,
+          eventId: eventId,
+          questionSetId: userSet,
+          qSetDocId: qSetDocId,
+          status: 'waiting',
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        assignedCount++;
+      });
+
+      // 4. Update quiz status to active
+      const updatedAt = new Date().toISOString();
+      const quizRef = doc(db, 'quizzes', quiz.id);
+      batch.update(quizRef, { status: 'active', isAssigned: true, updatedAt });
+
+      await batch.commit();
+
+      // Audit log
+      await addDoc(collection(db, 'auditLogs'), {
+        timestamp: new Date().toISOString(),
+        userId: 'admin',
+        eventType: 'Quiz Started (Auto-Assigned)',
+        eventId: eventId,
+        metadata: { quizId: quiz.id, assignedCount, skippedCount }
+      });
+
+      setQuizzes(quizzes.map(q => q.id === quiz.id ? { ...q, status: 'active', updatedAt } : q));
+
+      if (skippedCount > 0) {
+        addToast(`Quiz started! ${assignedCount} participants assigned. ${skippedCount} users skipped (no A/B set assigned).`, 'warning');
+      } else {
+        addToast(`Quiz started! ${assignedCount} participants assigned successfully.`, 'success');
+      }
+    } catch (error) {
+      console.error("Error starting quiz:", error);
+      addToast("Failed to start quiz.", 'error');
+    } finally {
+      setStartingQuiz(null);
     }
   };
 
@@ -130,14 +225,14 @@ export const QuizzesPage: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap items-center justify-end gap-2">
                           {quiz.status === 'draft' && (
-                            <>
-                              <Link to={`/admin/events/${eventId}/quizzes/${quiz.id}/assign`}>
-                                <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10 cursor-pointer">Assign A/B</Button>
-                              </Link>
-                              {quiz.isAssigned && (
-                                <Button size="sm" onClick={() => handleUpdateStatus(quiz.id, 'active')} className="bg-green-600 hover:bg-green-700 cursor-pointer">Start Quiz</Button>
-                              )}
-                            </>
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleStartQuiz(quiz)} 
+                              isLoading={startingQuiz === quiz.id}
+                              className="bg-green-600 hover:bg-green-700 cursor-pointer"
+                            >
+                              Start Quiz
+                            </Button>
                           )}
                           {quiz.status === 'active' && (
                             <>

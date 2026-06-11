@@ -28,6 +28,7 @@ export const useAuthListener = () => {
               status: userData.status || 'pending',
               courseId: userData.courseId,
               eventId: userData.eventId,
+              questionSet: userData.questionSet,
             });
             setLoading(false);
           } else {
