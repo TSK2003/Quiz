@@ -72,10 +72,30 @@ export const UsersPage: React.FC = () => {
   const handleUpdateCourse = async (userId: string, newCourseId: string) => {
     if (!newCourseId) return;
     try {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, { courseId: newCourseId });
-      setUsers(users.map(u => u.id === userId ? { ...u, courseId: newCourseId } : u));
-      addToast("User course updated", 'success');
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
+      
+      const updates: any = {};
+      
+      if (user.eventId === eventId) {
+        updates.courseId = newCourseId;
+      }
+      
+      if (user.enrollments) {
+        const newEnrollments = user.enrollments.map((en: any) => {
+          if (en.eventId === eventId) {
+            return { ...en, courseId: newCourseId, courseName: getCourseName(newCourseId) };
+          }
+          return en;
+        });
+        updates.enrollments = newEnrollments;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateDoc(doc(db, 'users', userId), updates);
+        setUsers(users.map(u => u.id === userId ? { ...u, ...updates } : u));
+        addToast("User course updated", 'success');
+      }
     } catch (error) {
       console.error("Error updating course:", error);
       addToast("Failed to change user course.", 'error');
@@ -152,6 +172,15 @@ export const UsersPage: React.FC = () => {
 
 
 
+  const getUserCourseId = (user: any) => {
+    if (user.eventId === eventId) return user.courseId;
+    if (user.enrollments) {
+      const en = user.enrollments.find((e: any) => e.eventId === eventId);
+      if (en) return en.courseId;
+    }
+    return user.courseId;
+  };
+
   const getCourseName = (courseId: string) => courses.find(c => c.id === courseId)?.name || courseId;
 
   const renderDraggableUser = (user: any) => (
@@ -170,7 +199,7 @@ export const UsersPage: React.FC = () => {
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium truncate">{user.name}</p>
-        <p className="text-xs text-muted-foreground truncate">{getCourseName(user.courseId)}</p>
+        <p className="text-xs text-muted-foreground truncate">{getCourseName(getUserCourseId(user))}</p>
       </div>
     </div>
   );
@@ -250,7 +279,7 @@ export const UsersPage: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="relative inline-block w-full">
                           <select 
-                            value={user.courseId || ''} 
+                            value={getUserCourseId(user) || ''}  
                             onChange={(e) => handleUpdateCourse(user.id, e.target.value)}
                             className="appearance-none w-full text-xs border border-border rounded-md px-2 py-1.5 bg-background cursor-pointer hover:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors pr-6 shadow-sm"
                           >

@@ -73,19 +73,30 @@ export const ParticipantDashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       if (!user?.eventId || !user?.courseId || !user?.uid) return;
       try {
-        // 1. Fetch all quizzes for this course
-        const q = query(
-          collection(db, 'quizzes'),
-          where('eventId', '==', user.eventId),
-          where('courseId', '==', user.courseId)
-        );
-        const querySnapshot = await getDocs(q);
-        const allQuizzes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        const enrollments = user.enrollments || [{ eventId: user.eventId, courseId: user.courseId }];
+        
+        // Fetch active events to know which quizzes can be started
+        const eventsSnap = await getDocs(collection(db, 'events'));
+        const activeEventIds = eventsSnap.docs.filter(d => d.data().status === 'active').map(d => d.id);
+
+        let allQuizzes: any[] = [];
+        for (const en of enrollments) {
+          if (!en.eventId || !en.courseId) continue;
+          const q = query(
+            collection(db, 'quizzes'),
+            where('eventId', '==', en.eventId),
+            where('courseId', '==', en.courseId)
+          );
+          const snap = await getDocs(q);
+          allQuizzes.push(...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+        }
+
+        // Deduplicate quizzes just in case
+        allQuizzes = Array.from(new Map(allQuizzes.map(q => [q.id, q])).values());
 
         const available: any[] = [];
         const history: any[] = [];
 
-        // 2. For each quiz, check if user has a participant record or result
         for (const quiz of allQuizzes) {
           const participantDoc = await getDoc(doc(db, 'participants', `${quiz.id}_${user.uid}`));
           const resultDoc = await getDoc(doc(db, 'results', `${quiz.id}_${user.uid}`));
@@ -110,20 +121,12 @@ export const ParticipantDashboard: React.FC = () => {
 
           if (hasCompleted) {
             history.push({ ...quiz, score, isDisqualified });
-          } else if (quiz.status === 'active') {
+          } else if (quiz.status === 'active' && activeEventIds.includes(quiz.eventId)) {
             available.push(quiz);
           }
         }
 
-        // 3. Check if the current event is active
-        const eventDoc = await getDoc(doc(db, 'events', user.eventId));
-        if (eventDoc.exists() && eventDoc.data().status !== 'active') {
-          // If the event is not active, do not allow starting any quizzes from it
-          setAvailableQuizzes([]);
-        } else {
-          setAvailableQuizzes(available);
-        }
-
+        setAvailableQuizzes(available);
         setHistoryQuizzes(history);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);

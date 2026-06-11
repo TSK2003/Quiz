@@ -58,18 +58,9 @@ export const RegisterPage: React.FC = () => {
 
           const coursesQuery = query(collection(db, 'courses'), where('eventId', '==', activeEvent.id));
           const coursesSnap = await getDocs(coursesQuery);
-          console.log("Courses found for active event:", coursesSnap.docs.length);
           setCourses(coursesSnap.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
         } else {
-          console.warn("No active event found. Fetching all courses as fallback.");
-          // Fallback: fetch all courses so participants can still register
-          const allCoursesSnap = await getDocs(collection(db, 'courses'));
-          console.log("Total courses found (fallback):", allCoursesSnap.docs.length);
-          if (allCoursesSnap.docs.length > 0) {
-            // Use the eventId from the first course found
-            setActiveEventId(allCoursesSnap.docs[0].data().eventId);
-            setCourses(allCoursesSnap.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
-          }
+          setCourses([]);
         }
       } catch (err) {
         console.error("Failed to fetch active event or courses", err);

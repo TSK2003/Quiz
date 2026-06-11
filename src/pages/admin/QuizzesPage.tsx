@@ -54,11 +54,22 @@ export const QuizzesPage: React.FC = () => {
 
     try {
       // 1. Fetch approved users for this course + event
-      const usersQ = query(collection(db, 'users'), where('eventId', '==', eventId));
-      const usersSnap = await getDocs(usersQ);
-      const approvedUsers = usersSnap.docs
-        .map(d => ({ id: d.id, ...d.data() } as any))
-        .filter(u => u.courseId === quiz.courseId && u.role === 'participant' && u.status === 'approved');
+      const q1 = query(collection(db, 'users'), where('eventId', '==', eventId));
+      const q2 = query(collection(db, 'users'), where('eventIds', 'array-contains', eventId));
+      const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+      const userMap = new Map();
+      snap1.docs.forEach(doc => userMap.set(doc.id, { id: doc.id, ...doc.data() } as any));
+      snap2.docs.forEach(doc => userMap.set(doc.id, { id: doc.id, ...doc.data() } as any));
+
+      const approvedUsers = Array.from(userMap.values()).filter(u => {
+        let userCourseId = u.courseId;
+        if (u.eventId !== eventId && u.enrollments) {
+          const en = u.enrollments.find((e: any) => e.eventId === eventId);
+          if (en) userCourseId = en.courseId;
+        }
+        return userCourseId === quiz.courseId && u.role === 'participant' && u.status === 'approved';
+      });
 
       if (approvedUsers.length === 0) {
         addToast("No approved users found for this course. Please approve users first.", 'error');
@@ -242,8 +253,6 @@ export const QuizzesPage: React.FC = () => {
                               <Button size="sm" onClick={() => handleUpdateStatus(quiz.id, 'completed')} className="bg-amber-600 hover:bg-amber-700 cursor-pointer text-white">Stop Quiz</Button>
                             </>
                           )}
-                          <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => handleDuplicate(quiz)}>Duplicate</Button>
-
                           <Button size="sm" variant="destructive" className="cursor-pointer" onClick={() => setQuizToDelete(quiz.id)}>Delete</Button>
                         </div>
                       </td>

@@ -43,6 +43,8 @@ export const LiveQuizPage: React.FC = () => {
     });
 
     setWarnings(prev => {
+      if (prev >= 3) return prev; // Already disqualifying
+
       const newWarnings = prev + 1;
       if (newWarnings >= 3) {
         // Terminate Quiz
@@ -83,10 +85,23 @@ export const LiveQuizPage: React.FC = () => {
       }
     };
 
+    const handleCopyPaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      handleViolation('Copy / Paste Action');
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Are you sure you want to leave? Your progress may be lost.";
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('copy', handleCopyPaste);
+    document.addEventListener('paste', handleCopyPaste);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     requestFullscreen();
 
@@ -95,6 +110,9 @@ export const LiveQuizPage: React.FC = () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('copy', handleCopyPaste);
+      document.removeEventListener('paste', handleCopyPaste);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
