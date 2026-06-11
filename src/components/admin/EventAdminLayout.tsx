@@ -4,7 +4,6 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { auth, db } from '../../config/firebase';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { BackButton } from '../ui/BackButton';
 import { PageWrapper } from '../ui/PageWrapper';
 import { Button } from '../ui/Button';
 import { LogOut, LayoutDashboard, Users, BookOpen, PenTool, ShieldAlert, ClipboardCheck, Menu, X } from 'lucide-react';
