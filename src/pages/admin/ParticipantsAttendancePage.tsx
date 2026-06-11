@@ -3,7 +3,9 @@ import { db } from '../../config/firebase';
 import { collection, query, where, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { useParams } from 'react-router-dom';
-import { UserCheck, Clock, Users, Pencil, Trash2, Search, Calendar, X, Check } from 'lucide-react';
+import { UserCheck, Clock, Users, Pencil, Trash2, Search, Calendar, X, Check, MapPin } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { useToastStore } from '../../store/useToastStore';
 
 interface AttendanceRecord {
   id: string;
@@ -19,6 +21,8 @@ export const ParticipantsAttendancePage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
+  const { addToast } = useToastStore();
   
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,6 +116,38 @@ export const ParticipantsAttendancePage: React.FC = () => {
     setEditingId(null);
   };
 
+  const handleUpdateLocation = () => {
+    if (!navigator.geolocation) {
+      addToast('Geolocation is not supported by your browser', 'error');
+      return;
+    }
+
+    if (!eventId) return;
+
+    setIsUpdatingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          await updateDoc(doc(db, 'events', eventId), {
+            location: { latitude, longitude }
+          });
+          addToast('Event location updated successfully', 'success');
+        } catch (error) {
+          console.error('Error updating location:', error);
+          addToast('Failed to update event location', 'error');
+        } finally {
+          setIsUpdatingLocation(false);
+        }
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        addToast('Failed to get your location. Please check browser permissions.', 'error');
+        setIsUpdatingLocation(false);
+      }
+    );
+  };
+
   const filteredRecords = records.filter(record => {
     const matchesSearch = record.participantName.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           record.participantEmail.toLowerCase().includes(searchQuery.toLowerCase());
@@ -124,9 +160,15 @@ export const ParticipantsAttendancePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Participants Attendance</h1>
-        <p className="text-muted-foreground">Monitor Participants Attendances</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Participants Attendance</h1>
+          <p className="text-muted-foreground">Monitor Participants Attendances</p>
+        </div>
+        <Button onClick={handleUpdateLocation} isLoading={isUpdatingLocation} className="gap-2 shrink-0">
+          <MapPin className="w-4 h-4" />
+          Update Event Location
+        </Button>
       </div>
 
       {/* Stats Cards */}
