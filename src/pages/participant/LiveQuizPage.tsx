@@ -24,6 +24,7 @@ export const LiveQuizPage: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const globalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startTimeRef = useRef<number>(Date.now());
 
   const requestFullscreen = () => {
     if (document.documentElement.requestFullscreen) {
@@ -137,6 +138,12 @@ export const LiveQuizPage: React.FC = () => {
           return;
         }
 
+        if (pData.startTime) {
+          startTimeRef.current = pData.startTime.toMillis?.() || Date.now();
+        } else {
+          startTimeRef.current = Date.now();
+        }
+
         let durationMinutes = 30; // default
         const quizSnap = await getDoc(doc(db, 'quizzes', quizId));
         if (quizSnap.exists()) {
@@ -184,7 +191,7 @@ export const LiveQuizPage: React.FC = () => {
 
       const totalQuestions = questions.length;
       const percentage = isDisqualified ? 0 : (score / totalQuestions) * 100;
-      const timeTaken = isDisqualified ? 0 : (totalTime - globalTimeLeft);
+      const timeTaken = isDisqualified ? 0 : Math.floor((Date.now() - startTimeRef.current) / 1000);
 
       // Update participant
       await setDoc(doc(db, 'participants', `${quizId}_${user.uid}`), {
@@ -283,6 +290,8 @@ export const LiveQuizPage: React.FC = () => {
       }
     });
 
+    const currentTimeTaken = Math.floor((Date.now() - startTimeRef.current) / 1000);
+
     try {
       await setDoc(doc(db, 'results', `${quizId}_${user.uid}`), {
         userId: user.uid,
@@ -292,6 +301,7 @@ export const LiveQuizPage: React.FC = () => {
         score,
         lastAnswerAt: serverTimestamp(),
         isDisqualified: false,
+        timeTaken: currentTimeTaken
       }, { merge: true });
     } catch (e) {
       console.error('Error updating live result', e);
