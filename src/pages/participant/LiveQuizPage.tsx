@@ -113,9 +113,17 @@ export const LiveQuizPage: React.FC = () => {
     document.addEventListener('paste', handleCopyPaste);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
+    // Aggressively detect floating windows or system overlays that might bypass events
+    const focusCheckInterval = setInterval(() => {
+      if (!document.hasFocus()) {
+        handleViolation('Lost Window Focus (Floating Window / Notification Shade)');
+      }
+    }, 1500);
+
     requestFullscreen();
 
     return () => {
+      clearInterval(focusCheckInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('contextmenu', handleContextMenu);
@@ -252,6 +260,7 @@ export const LiveQuizPage: React.FC = () => {
     }
 
     if (timeLeft === 0) {
+      updateLiveResult(); // Push result before moving next
       if (currentQuestionIndex < questions.length - 1) {
         nextQuestion();
       } else {
@@ -282,6 +291,7 @@ export const LiveQuizPage: React.FC = () => {
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
   const handleManualNext = () => {
+    updateLiveResult(); // Push result before moving next
     if (isLastQuestion) {
       handleAutoSubmit();
     } else {
@@ -289,13 +299,12 @@ export const LiveQuizPage: React.FC = () => {
     }
   };
 
-  const updateLiveResult = async (questionId: string, answer: string) => {
+  const updateLiveResult = async () => {
     if (!quizId || !user) return;
     
-    const newAnswers = { ...answers, [questionId]: answer };
     let score = 0;
     questions.forEach((q) => {
-      if (newAnswers[q.id] === q.correctAnswer) {
+      if (answers[q.id] === q.correctAnswer) {
         score += 1;
       }
     });
@@ -320,7 +329,7 @@ export const LiveQuizPage: React.FC = () => {
 
   const handleSelectAnswer = (questionId: string, answer: string) => {
     answerQuestion(questionId, answer);
-    updateLiveResult(questionId, answer);
+    // Removed updateLiveResult from here. It will run on 'Next Question'.
   };
 
   return (
