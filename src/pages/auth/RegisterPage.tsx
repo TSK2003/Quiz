@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Full name is required'),
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Invalid email address').toLowerCase(),
   mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be exactly 10 digits'),
   courseId: z.string().min(1, 'Please select a course'),
   password: z.string()

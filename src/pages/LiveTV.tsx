@@ -116,6 +116,9 @@ export const LiveTV: React.FC = () => {
         if (b.score !== a.score) {
           return b.score - a.score;
         }
+        if (a.timeTaken !== undefined && b.timeTaken !== undefined) {
+          return a.timeTaken - b.timeTaken;
+        }
         const timeA = a.lastAnswerAt?.toMillis?.() || a.completedAt?.toMillis?.() || new Date(a.lastAnswerAt || a.completedAt || 0).getTime() || 0;
         const timeB = b.lastAnswerAt?.toMillis?.() || b.completedAt?.toMillis?.() || new Date(b.lastAnswerAt || b.completedAt || 0).getTime() || 0;
         return timeA - timeB;
@@ -134,7 +137,8 @@ export const LiveTV: React.FC = () => {
     };
   }, [activeUsers, mode, activeQuizId]);
 
-  const getRankIcon = (index: number) => {
+  const getRankIcon = (index: number, result: any) => {
+    if (result.isDisqualified) return <div className="w-8 h-8 flex items-center justify-center font-bold text-red-500 text-xl">✗</div>;
     switch(index) {
       case 0: return <Trophy className="w-8 h-8 text-yellow-500 drop-shadow-md" />;
       case 1: return <Medal className="w-8 h-8 text-slate-400 drop-shadow-md" />;
@@ -191,10 +195,11 @@ export const LiveTV: React.FC = () => {
           {mode === 'leaderboard' ? (
             <>
               {/* Table Header */}
-              <div className="hidden md:grid grid-cols-[80px_1fr_2fr_120px] gap-6 px-8 py-4 mb-4 text-muted-foreground font-bold uppercase tracking-wider text-xs border-b border-border/50">
+              <div className="hidden md:grid grid-cols-[80px_1fr_2fr_100px_120px] gap-6 px-8 py-4 mb-4 text-muted-foreground font-bold uppercase tracking-wider text-xs border-b border-border/50">
                 <div className="text-center">Rank</div>
                 <div>Participant Name</div>
                 <div>Course Track</div>
+                <div className="text-center">Time</div>
                 <div className="text-right">Score</div>
               </div>
 
@@ -202,7 +207,6 @@ export const LiveTV: React.FC = () => {
               <div className="space-y-3 md:space-y-4">
                 <AnimatePresence mode="popLayout">
                   {results.map((result, index) => {
-                    const isTop3 = index < 3;
                     return (
                       <motion.div
                         key={result.id}
@@ -211,7 +215,8 @@ export const LiveTV: React.FC = () => {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -20, transition: { duration: 0.2 } }}
                         transition={{ type: "spring", stiffness: 350, damping: 25, mass: 1 }}
-                        className={`grid grid-cols-[60px_1fr_100px] md:grid-cols-[80px_1fr_2fr_120px] gap-4 md:gap-6 px-6 md:px-8 py-5 md:py-6 items-center rounded-2xl border transition-all relative overflow-hidden group ${
+                        className={`grid grid-cols-[60px_1fr_100px] md:grid-cols-[80px_1fr_2fr_100px_120px] gap-4 md:gap-6 px-6 md:px-8 py-5 md:py-6 items-center rounded-2xl border transition-all relative overflow-hidden group ${
+                          result.isDisqualified ? 'bg-red-50/80 border-red-300 dark:bg-red-900/30 dark:border-red-800 shadow-sm' :
                           index === 0 ? 'bg-gradient-to-r from-yellow-50 to-amber-100/30 border-yellow-200 shadow-lg shadow-yellow-500/10 dark:from-yellow-500/10 dark:border-yellow-500/30' :
                           index === 1 ? 'bg-gradient-to-r from-slate-50 to-slate-100/50 border-slate-200 shadow-md dark:from-slate-800/50 dark:border-slate-700' :
                           index === 2 ? 'bg-gradient-to-r from-orange-50 to-orange-100/30 border-orange-200 shadow-md dark:from-orange-500/10 dark:border-orange-500/30' :
@@ -221,11 +226,11 @@ export const LiveTV: React.FC = () => {
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]" />
                         
                         <div className="flex justify-center relative z-10">
-                          {getRankIcon(index)}
+                          {getRankIcon(index, result)}
                         </div>
                         
                         <div className="relative z-10 flex flex-col justify-center min-w-0">
-                          <div className={`text-md sm:text-2xl font-semibold truncate tracking-tight ${isTop3 ? 'text-black dark:text-black' : 'text-black dark:text-black'}`}>
+                          <div className={`text-md sm:text-2xl font-semibold truncate tracking-tight ${result.isDisqualified ? 'text-red-700 dark:text-red-400' : 'text-black dark:text-black'}`}>
                             {result.userName}
                           </div>
                           <div className="md:hidden text-xs text-muted-foreground truncate mt-0.5">
@@ -234,19 +239,27 @@ export const LiveTV: React.FC = () => {
                         </div>
                         
                         <div className="hidden md:block relative z-10 min-w-0">
-                           <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm font-semibold truncate max-w-full">
+                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold truncate max-w-full ${result.isDisqualified ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200' : 'bg-secondary text-secondary-foreground'}`}>
                              {courses[result.courseId] || result.courseId}
                            </span>
                         </div>
+
+                        <div className="hidden md:flex relative z-10 justify-center">
+                           <span className={`text-sm font-bold px-3 py-1 rounded-md ${result.isDisqualified ? 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/50' : 'text-slate-600 bg-slate-100/80 dark:bg-slate-800 dark:text-slate-300'}`}>
+                             {result.timeTaken !== undefined && !result.isDisqualified
+                               ? `${Math.floor(result.timeTaken / 60)}m ${result.timeTaken % 60}s` 
+                               : '--:--'}
+                           </span>
+                        </div>
                         
-                        <div className="text-right relative z-10 flex flex-col justify-center">
+                        <div className="text-right relative z-10 flex flex-col justify-center items-end">
                           <span className={`text-3xl md:text-4xl font-black ${
-                            result.isDisqualified ? 'text-destructive drop-shadow-sm' : 
+                            result.isDisqualified ? 'text-red-600 dark:text-red-500 drop-shadow-sm' : 
                             'text-black drop-shadow-sm'
                           }`}>
                             {result.isDisqualified ? 'DQ' : result.score}
                           </span>
-                          {result.isDisqualified && <span className="text-[10px] uppercase font-bold text-destructive tracking-widest mt-1">Disqualified</span>}
+                          {result.isDisqualified && <span className="text-[10px] uppercase font-bold text-red-600 dark:text-red-500 tracking-widest mt-1">Disqualified</span>}
                         </div>
                       </motion.div>
                     );

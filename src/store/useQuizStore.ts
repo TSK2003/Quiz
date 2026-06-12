@@ -17,6 +17,7 @@ interface QuizState {
   answers: Record<string, string>;
   timeLeft: number;
   globalTimeLeft: number;
+  totalTime: number;
   isSubmitting: boolean;
   setQuiz: (quizId: string, questions: Question[], durationMinutes: number) => void;
   answerQuestion: (questionId: string, answer: string) => void;
@@ -34,6 +35,7 @@ export const useQuizStore = create<QuizState>((set) => ({
   answers: {},
   timeLeft: 15, // 15 seconds per question
   globalTimeLeft: 1800, // 30 minutes default
+  totalTime: 1800,
   isSubmitting: false,
   setQuiz: (quizId, questions, durationMinutes) => set({ 
     quizId, 
@@ -41,7 +43,8 @@ export const useQuizStore = create<QuizState>((set) => ({
     currentQuestionIndex: 0, 
     answers: {}, 
     timeLeft: 15,
-    globalTimeLeft: durationMinutes * 60
+    globalTimeLeft: durationMinutes * 60,
+    totalTime: durationMinutes * 60
   }),
   answerQuestion: (questionId, answer) => set((state) => ({
     answers: { ...state.answers, [questionId]: answer }
@@ -53,5 +56,5 @@ export const useQuizStore = create<QuizState>((set) => ({
   setTimeLeft: (time) => set({ timeLeft: time }),
   setGlobalTimeLeft: (time) => set({ globalTimeLeft: time }),
   setSubmitting: (isSubmitting) => set({ isSubmitting }),
-  resetQuiz: () => set({ quizId: null, questions: [], currentQuestionIndex: 0, answers: {}, timeLeft: 15, globalTimeLeft: 1800, isSubmitting: false })
+  resetQuiz: () => set({ quizId: null, questions: [], currentQuestionIndex: 0, answers: {}, timeLeft: 15, globalTimeLeft: 1800, totalTime: 1800, isSubmitting: false })
 }));

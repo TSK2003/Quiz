@@ -13,7 +13,7 @@ export const LiveQuizPage: React.FC = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const { 
-    questions, currentQuestionIndex, answers, timeLeft, globalTimeLeft, isSubmitting,
+    questions, currentQuestionIndex, answers, timeLeft, globalTimeLeft, totalTime, isSubmitting,
     setQuiz, answerQuestion, nextQuestion, setTimeLeft, setGlobalTimeLeft, setSubmitting, resetQuiz 
   } = useQuizStore();
 
@@ -184,6 +184,7 @@ export const LiveQuizPage: React.FC = () => {
 
       const totalQuestions = questions.length;
       const percentage = isDisqualified ? 0 : (score / totalQuestions) * 100;
+      const timeTaken = isDisqualified ? 0 : (totalTime - globalTimeLeft);
 
       // Update participant
       await setDoc(doc(db, 'participants', `${quizId}_${user.uid}`), {
@@ -204,6 +205,7 @@ export const LiveQuizPage: React.FC = () => {
         correctAnswers: isDisqualified ? 0 : correctCount,
         wrongAnswers: isDisqualified ? 0 : wrongCount,
         isDisqualified,
+        timeTaken,
         completedAt: serverTimestamp()
       });
 
@@ -221,7 +223,7 @@ export const LiveQuizPage: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [quizId, user, questions, answers, isSubmitting, navigate, setSubmitting]);
+  }, [quizId, user, questions, answers, isSubmitting, navigate, setSubmitting, totalTime, globalTimeLeft]);
 
   // Timer Effect
   useEffect(() => {
