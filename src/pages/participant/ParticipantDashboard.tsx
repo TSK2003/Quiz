@@ -90,17 +90,48 @@ export const ParticipantDashboard: React.FC = () => {
           const snap = await getDocs(q);
           allQuizzes.push(...snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
         }
-
-        // Deduplicate quizzes just in case
         allQuizzes = Array.from(new Map(allQuizzes.map(q => [q.id, q])).values());
 
         const available: any[] = [];
         const history: any[] = [];
+        const completedQuizIds = new Set<string>();
+
+        // 1. Fetch ALL history directly from results
+        const resultsQ = query(collection(db, 'results'), where('userId', '==', user.uid));
+        const resultsSnap = await getDocs(resultsQ);
+
+        for (const rDoc of resultsSnap.docs) {
+          const rData = rDoc.data();
+          completedQuizIds.add(rData.quizId);
+          
+          let quizName = 'Unknown Quiz';
+          let quizDesc = '';
+          try {
+            const qDoc = await getDoc(doc(db, 'quizzes', rData.quizId));
+            if (qDoc.exists()) {
+              quizName = qDoc.data().name;
+              quizDesc = qDoc.data().description || '';
+            }
+          } catch (e) {}
+
+          history.push({
+            id: rData.quizId,
+            name: quizName,
+            description: quizDesc,
+            score: rData.score,
+            isDisqualified: rData.isDisqualified,
+            completedAt: rData.completedAt?.toMillis?.() || 0
+          });
+        }
+
+        // 2. Also check participants for disqualified/completed that might not have a result
+        // Note: participants are keyed by `${quizId}_${userId}` but we might not be able to query by userId if it's not a field.
+        // Wait, does participants have userId as a field? Let's assume we just check the current enrolled quizzes for available/history.
 
         for (const quiz of allQuizzes) {
-          const participantDoc = await getDoc(doc(db, 'participants', `${quiz.id}_${user.uid}`));
-          const resultDoc = await getDoc(doc(db, 'results', `${quiz.id}_${user.uid}`));
+          if (completedQuizIds.has(quiz.id)) continue; // Already in history
 
+          const participantDoc = await getDoc(doc(db, 'participants', `${quiz.id}_${user.uid}`));
           let hasCompleted = false;
           let isDisqualified = false;
           let score = 0;
@@ -110,21 +141,19 @@ export const ParticipantDashboard: React.FC = () => {
             if (pData.status === 'completed' || pData.status === 'disqualified') {
               hasCompleted = true;
               isDisqualified = pData.status === 'disqualified';
+              score = pData.score || 0;
             }
-          }
-
-          if (resultDoc.exists()) {
-            score = resultDoc.data().score;
-            isDisqualified = resultDoc.data().isDisqualified;
-            hasCompleted = true;
           }
 
           if (hasCompleted) {
             history.push({ ...quiz, score, isDisqualified });
+            completedQuizIds.add(quiz.id);
           } else if (quiz.status === 'active' && activeEventIds.includes(quiz.eventId)) {
             available.push(quiz);
           }
         }
+        
+        history.sort((a, b) => b.completedAt - a.completedAt);
 
         setAvailableQuizzes(available);
         setHistoryQuizzes(history);
