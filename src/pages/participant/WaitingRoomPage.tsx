@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../../config/firebase';
-import { doc, getDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -22,38 +22,93 @@ export const WaitingRoomPage: React.FC = () => {
     if (!quizId || !user) return;
 
     // Fetch static quiz details
+    let unsubscribe: any = null;
+
+    const setupListener = (pRef: any) => {
+      unsubscribe = onSnapshot(pRef, (docSnap: any) => {
+        if (docSnap.exists()) {
+          setParticipantState(docSnap.data());
+          setLoading(false);
+        } else {
+          setError("You are not assigned to this quiz. Please contact administrator.");
+          setLoading(false);
+        }
+      }, (err: any) => {
+        console.error(err);
+        setError("Error checking assignment");
+        setLoading(false);
+      });
+    };
+
     const fetchQuiz = async () => {
       try {
         const quizDoc = await getDoc(doc(db, 'quizzes', quizId));
         if (quizDoc.exists()) {
-          setQuiz({ id: quizDoc.id, ...quizDoc.data() });
+          const quizData = quizDoc.data();
+          setQuiz({ id: quizDoc.id, ...quizData });
+
+          const participantRef = doc(db, 'participants', `${quizId}_${user.uid}`);
+          const pSnap = await getDoc(participantRef);
+
+          if (!pSnap.exists()) {
+            if (quizData.status !== 'active') {
+              setError("This quiz is not currently active.");
+              setLoading(false);
+              return;
+            }
+
+            // Auto-assign them on the fly!
+            const qSetsQ = query(collection(db, 'questionSets'), where('quizId', '==', quizId));
+            const qSetsSnap = await getDocs(qSetsQ);
+
+            let setA_Id = '';
+            let setB_Id = '';
+            let fallbackId = '';
+
+            qSetsSnap.forEach(d => {
+              if (d.data().setName === 'A') setA_Id = d.id;
+              if (d.data().setName === 'B') setB_Id = d.id;
+              if (!fallbackId) fallbackId = d.id;
+            });
+
+            const userSet = user.questionSet || 'A';
+            let qSetDocId = userSet === 'A' ? setA_Id : setB_Id;
+            if (!qSetDocId) qSetDocId = fallbackId;
+
+            if (!qSetDocId) {
+              setError("No question sets found for this quiz.");
+              setLoading(false);
+              return;
+            }
+
+            await setDoc(participantRef, {
+              userId: user.uid,
+              quizId: quizId,
+              eventId: user.eventId || '',
+              questionSetId: userSet,
+              qSetDocId: qSetDocId,
+              status: 'waiting',
+              updatedAt: serverTimestamp()
+            });
+          }
+
+          setupListener(participantRef);
         } else {
           setError("Quiz not found");
+          setLoading(false);
         }
       } catch (err) {
+        console.error(err);
         setError("Error fetching quiz");
+        setLoading(false);
       }
     };
+    
     fetchQuiz();
 
-    // Listen to participant assignment status in real-time
-    const participantRef = doc(db, 'participants', `${quizId}_${user.uid}`);
-    const unsubscribe = onSnapshot(participantRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setParticipantState(data);
-        setLoading(false);
-      } else {
-        setError("You are not assigned to this quiz. Please contact administrator.");
-        setLoading(false);
-      }
-    }, (err) => {
-      console.error(err);
-      setError("Error checking assignment");
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [quizId, user]);
 
   const handleStartQuiz = async () => {

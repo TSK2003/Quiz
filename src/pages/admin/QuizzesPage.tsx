@@ -165,6 +165,12 @@ export const QuizzesPage: React.FC = () => {
     }
   };
 
+  const formatTime = (isoString: string) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -205,7 +211,15 @@ export const QuizzesPage: React.FC = () => {
                       <td className="px-6 py-4 font-medium">{quiz.name}</td>
                       <td className="px-6 py-4">{quiz.courseName || quiz.courseId}</td>
                       <td className="px-6 py-4">{quiz.totalQuestions}</td>
-                      <td className="px-6 py-4">{quiz.duration} mins</td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium">{quiz.duration} mins</div>
+                        {quiz.status === 'active' && quiz.updatedAt && (
+                          <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                            <div>Started: <span className="text-foreground font-medium">{formatTime(quiz.updatedAt)}</span></div>
+                            <div>Est. End: <span className="text-foreground font-medium">{formatTime(new Date(new Date(quiz.updatedAt).getTime() + (quiz.duration * 60000)).toISOString())}</span></div>
+                          </div>
+                        )}
+                      </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold
                           ${quiz.status === 'active' ? 'bg-green-100 text-green-700' : 
