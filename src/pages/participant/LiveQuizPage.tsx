@@ -25,6 +25,7 @@ export const LiveQuizPage: React.FC = () => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const globalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef<number>(Date.now());
+  const lastViolationTimeRef = useRef<number>(0);
 
   const requestFullscreen = () => {
     if (document.documentElement.requestFullscreen) {
@@ -35,6 +36,11 @@ export const LiveQuizPage: React.FC = () => {
   const handleViolation = useCallback(async (type: string) => {
     if (!quizId || !user) return;
     
+    // Prevent double triggers within 2 seconds (e.g. blur + visibilitychange firing together)
+    const now = Date.now();
+    if (now - lastViolationTimeRef.current < 2000) return;
+    lastViolationTimeRef.current = now;
+
     // Log violation
     await addDoc(collection(db, 'violations'), {
       userId: user.uid,
@@ -64,7 +70,9 @@ export const LiveQuizPage: React.FC = () => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') handleViolation('Tab Switch / Minimize');
     };
-    // Removed overly-sensitive blur listener
+    const handleBlur = () => {
+      handleViolation('Lost Window Focus (Tab Switch)');
+    };
     const handleContextMenu = (e: Event) => e.preventDefault();
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -81,8 +89,8 @@ export const LiveQuizPage: React.FC = () => {
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement) {
         handleViolation('Exited Fullscreen');
-        // Force back
-        setTimeout(requestFullscreen, 1000);
+        // Removed setTimeout requestFullscreen as it requires a user gesture. 
+        // It's now handled by the 'I Understand' button click.
       }
     };
 
@@ -97,6 +105,7 @@ export const LiveQuizPage: React.FC = () => {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -108,6 +117,7 @@ export const LiveQuizPage: React.FC = () => {
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -397,7 +407,10 @@ export const LiveQuizPage: React.FC = () => {
                   <Button 
                     className="w-full cursor-pointer" 
                     variant="destructive" 
-                    onClick={() => setShowWarningModal(false)}
+                    onClick={() => {
+                      setShowWarningModal(false);
+                      requestFullscreen();
+                    }}
                   >
                     I Understand, Return to Quiz
                   </Button>
