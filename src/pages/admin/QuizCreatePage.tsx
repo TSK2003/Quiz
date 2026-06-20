@@ -60,13 +60,15 @@ export const QuizCreatePage: React.FC = () => {
       return `Set ${setName} is empty.\n`;
     }
 
+    const isMissing = (val: any) => val === undefined || val === null || val.toString().trim() === '';
+
     questions.forEach((q, index) => {
       const rowNum = index + 2; // Assuming row 1 is header
-      if (!q['Question']) report += `Set ${setName} - Row ${rowNum}: Missing Question text.\n`;
-      if (!q['Option A']) report += `Set ${setName} - Row ${rowNum}: Missing Option A.\n`;
-      if (!q['Option B']) report += `Set ${setName} - Row ${rowNum}: Missing Option B.\n`;
-      if (!q['Option C']) report += `Set ${setName} - Row ${rowNum}: Missing Option C.\n`;
-      if (!q['Option D']) report += `Set ${setName} - Row ${rowNum}: Missing Option D.\n`;
+      if (isMissing(q['Question'])) report += `Set ${setName} - Row ${rowNum}: Missing Question text.\n`;
+      if (isMissing(q['Option A'])) report += `Set ${setName} - Row ${rowNum}: Missing Option A.\n`;
+      if (isMissing(q['Option B'])) report += `Set ${setName} - Row ${rowNum}: Missing Option B.\n`;
+      if (isMissing(q['Option C'])) report += `Set ${setName} - Row ${rowNum}: Missing Option C.\n`;
+      if (isMissing(q['Option D'])) report += `Set ${setName} - Row ${rowNum}: Missing Option D.\n`;
       
       const correct = q['Correct Answer']?.toString().trim().toUpperCase();
       if (!correct || !validAnswers.includes(correct)) {
