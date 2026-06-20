@@ -77,6 +77,30 @@ export const QuizCreatePage: React.FC = () => {
     return report;
   };
 
+  const downloadSampleExcel = () => {
+    const ws = XLSX.utils.json_to_sheet([
+      {
+        "Question": "What is the capital of France?",
+        "Option A": "London",
+        "Option B": "Berlin",
+        "Option C": "Paris",
+        "Option D": "Madrid",
+        "Correct Answer": "C"
+      },
+      {
+        "Question": "What is 2 + 2?",
+        "Option A": "3",
+        "Option B": "4",
+        "Option C": "5",
+        "Option D": "6",
+        "Correct Answer": "B"
+      }
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sample Questions");
+    XLSX.writeFile(wb, "Sample_Quiz_Questions.xlsx");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quizName || !courseId || !fileA || !fileB) {
@@ -198,7 +222,14 @@ export const QuizCreatePage: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
+            <div className="flex justify-between items-center pt-4 border-t border-border">
+              <h3 className="text-lg font-medium">Upload Question Sets</h3>
+              <Button type="button" variant="outline" size="sm" onClick={downloadSampleExcel}>
+                Download Sample Format
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>Question Set A (Excel)</Label>
                 <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors">

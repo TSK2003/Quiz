@@ -168,13 +168,19 @@ export const LiveQuizPage: React.FC = () => {
           durationMinutes = quizSnap.data().duration || 30;
         }
 
+        // Calculate actual remaining time
+        const now = Date.now();
+        const elapsedSeconds = Math.floor((now - startTimeRef.current) / 1000);
+        let remainingSeconds = (durationMinutes * 60) - elapsedSeconds;
+        if (remainingSeconds < 0) remainingSeconds = 0;
+
         const qSetId = pData.qSetDocId;
         const qSetSnap = await getDoc(doc(db, 'questionSets', qSetId));
         
         if (qSetSnap.exists()) {
           const qsData = qSetSnap.data();
           const loadedQuestions = qsData.questions.map((q: any, index: number) => ({ id: `q${index}`, ...q }));
-          setQuiz(quizId, loadedQuestions, durationMinutes);
+          setQuiz(quizId, loadedQuestions, remainingSeconds);
         }
       } catch (err) {
         console.error("Error loading quiz data", err);

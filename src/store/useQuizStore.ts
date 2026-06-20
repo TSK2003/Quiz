@@ -19,7 +19,7 @@ interface QuizState {
   globalTimeLeft: number;
   totalTime: number;
   isSubmitting: boolean;
-  setQuiz: (quizId: string, questions: Question[], durationMinutes: number) => void;
+  setQuiz: (quizId: string, questions: Question[], durationSeconds: number) => void;
   answerQuestion: (questionId: string, answer: string) => void;
   nextQuestion: () => void;
   setTimeLeft: (time: number) => void;
@@ -37,14 +37,14 @@ export const useQuizStore = create<QuizState>((set) => ({
   globalTimeLeft: 1800, // 30 minutes default
   totalTime: 1800,
   isSubmitting: false,
-  setQuiz: (quizId, questions, durationMinutes) => set({ 
+  setQuiz: (quizId, questions, durationSeconds) => set({ 
     quizId, 
     questions, 
     currentQuestionIndex: 0, 
     answers: {}, 
     timeLeft: 15,
-    globalTimeLeft: durationMinutes * 60,
-    totalTime: durationMinutes * 60
+    globalTimeLeft: durationSeconds,
+    totalTime: durationSeconds
   }),
   answerQuestion: (questionId, answer) => set((state) => ({
     answers: { ...state.answers, [questionId]: answer }
